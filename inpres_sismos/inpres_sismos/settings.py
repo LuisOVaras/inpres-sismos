@@ -86,9 +86,14 @@ ROBOTSTXT_OBEY = True
 #HTTPCACHE_DIR = "httpcache"
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = "scrapy.extensions.httpcache.FilesystemCacheStorage"
+import os
 
 # Set settings whose default value is deprecated to a future-proof value
 REQUEST_FINGERPRINTER_IMPLEMENTATION = "2.7"
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
 FEED_FORMAT = 'csv'
+FEED_URI = os.path.join(os.path.dirname(__file__), '..','..', 'data', 'sismos_historicos.csv')
+DOWNLOAD_DELAY = 2  # Espera 2 segundos entre cada solicitud
+# Establece un retraso aleatorio entre 0.5 * DOWNLOAD_DELAY y 1.5 * DOWNLOAD_DELAY
+RANDOMIZE_DOWNLOAD_DELAY = True
