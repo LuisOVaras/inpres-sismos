@@ -11,7 +11,7 @@ from selenium.common.exceptions import NoSuchElementException
 
 # Configuración de Selenium
 options = webdriver.ChromeOptions()
-options.add_argument("--headless")  # Opcional: Ejecuta Chrome en modo sin cabeza (sin abrir una ventana)
+#options.add_argument("--headless")  # Opcional: Ejecuta Chrome en modo sin cabeza (sin abrir una ventana)
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
 # URL base
@@ -26,9 +26,9 @@ output_file = os.path.join(carpeta_data, "sismos.csv")
 
 # Configura el archivo CSV para guardar los datos
 #output_file = "sismos.csv"
-with open(output_file, mode="w", newline="") as file:
+with open(output_file, mode="a", newline="") as file:
     writer = csv.writer(file)
-    writer.writerow(["fecha", "hora", "latitud", "longitud", "profundidad", "magnitud", "provincia", "sentido"])
+    #writer.writerow(["fecha", "hora", "latitud", "longitud", "profundidad", "magnitud", "provincia", "sentido"])
     
     # Hacer clic en los botones antes de comenzar el scraping
     driver.get(base_url)  # Carga la primera página
@@ -67,10 +67,16 @@ with open(output_file, mode="w", newline="") as file:
     select_year.click()
 
     select = Select(select_year)
-    select.select_by_value("2024")
+    select.select_by_value("2015")
     time.sleep(1)
     
-    dia = driver.find_element(By.XPATH, '//*[@id="ui-datepicker-div"]/table/tbody/tr[2]/td[6]')
+    select_month = driver.find_element(By.XPATH, '//*[@id="ui-datepicker-div"]/div/div/select[1]')
+    select_month.click()
+    
+    select = Select(select_month)
+    select.select_by_value("7")
+    
+    dia = driver.find_element(By.XPATH, '//*[@id="ui-datepicker-div"]/table/tbody/tr[3]/td[5]')
     dia.click()
     time.sleep(1)
 
@@ -84,22 +90,23 @@ with open(output_file, mode="w", newline="") as file:
     time.sleep(2)
     
     # Número de páginas a recorrer
-    max_paginas = 2
+    max_paginas = 695
     pagina_actual = 0  # Contador para las páginas
 
+   
 
     # Bucle para recorrer las páginas de manera indefinida hasta que no haya botón de "Siguiente"
     while pagina_actual < max_paginas:
         # Espera para asegurar que la página esté cargada
-        time.sleep(5)
+        time.sleep(3)
         
         # Selecciona las filas de datos
-        filas = driver.find_elements(By.XPATH, '//*[@id="sismos"]/tbody/tr[position() > 3]')
+        filas = driver.find_elements(By.XPATH, '//*[@id="sismos"]/tbody/tr[position() > 2]')
         
         # Verifica si se encontraron filas
         if not filas:
             print("No se encontraron filas en esta página.")
-            break  # Rompe el bucle si no se encuentran filas
+            #break  # Rompe el bucle si no se encuentran filas
 
         # Extrae los datos de cada fila
         for fila in filas:
@@ -110,7 +117,6 @@ with open(output_file, mode="w", newline="") as file:
                 longitud = fila.find_element(By.XPATH, './/td[5]').text
                 profundidad = fila.find_element(By.XPATH, './/td[6]').text
                 magnitud = fila.find_element(By.XPATH, './/td[7]').text
-                intensidad = fila.find_element(By.XPATH, './/td[8]').text
                 provincia = fila.find_element(By.XPATH, './/td[9]').text
                 
                 # Determina si es "sentido" basado en el color del texto en magnitud
