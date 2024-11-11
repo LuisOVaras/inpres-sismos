@@ -94,6 +94,6 @@ TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
 FEED_FORMAT = 'csv'
 FEED_URI = os.path.join(os.path.dirname(__file__), '..','..', 'data', 'sismos_historicos.csv')
-DOWNLOAD_DELAY = 2  # Espera 2 segundos entre cada solicitud
+DOWNLOAD_DELAY = 3  # Espera 2 segundos entre cada solicitud
 # Establece un retraso aleatorio entre 0.5 * DOWNLOAD_DELAY y 1.5 * DOWNLOAD_DELAY
 RANDOMIZE_DOWNLOAD_DELAY = True
