@@ -45,8 +45,8 @@ try:
             continue  # Saltar filas con fechas inválidas
 
         # Detiene el scraping cuando la fecha es anterior a la fecha objetivo
-        if quake_date < target_date:
-            break
+        if quake_date != target_date:
+            continue
 
         # Asigna las columnas a las variables según el orden deseado
         hora = cells[2].find_element(By.TAG_NAME, "font").text + ":00"
