@@ -12,19 +12,19 @@ class SismosHistoricosSpider(scrapy.Spider):
 
         for row in rows:
             # Extraemos los datos de cada columna de la fila
-            description = row.xpath('td[2]/text()').get()
-            latitude = row.xpath('td[3]/text()').get()
-            longitude = row.xpath('td[4]/text()').get()
+            descripcion = row.xpath('td[2]/text()').get()
+            latitud = row.xpath('td[3]/text()').get()
+            longitud = row.xpath('td[4]/text()').get()
 
             # Limpiamos los datos si es necesario
-            description = description.strip() if description else ''
-            latitude = latitude.strip() if latitude else ''
-            longitude = longitude.strip() if longitude else ''
+            descripcion = descripcion.strip() if descripcion else ''
+            latitud = latitud.strip() if latitud else ''
+            longitud = longitud.strip() if longitud else ''
 
             # Creamos un diccionario con los datos extraídos
             yield {
-                'description': description,
-                'latitude': latitude,
-                'longitude': longitude,
+                'descripcion': descripcion,
+                'latitud': latitud,
+                'longitud': longitud,
             }
     
