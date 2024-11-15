@@ -40,7 +40,7 @@ jobs:
       run: |
         git config --global user.name "github-actions"
         git config --global user.email "github-actions@github.com"
-        git add inpres_sismos/inpres_sismos/selenium/data/test.csv
+        git add data/test.csv
         git commit -m "Actualizar test.csv con nuevos datos de sismos"
 
     # Paso 7: Hacer push de los cambios al repositorio
