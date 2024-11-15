@@ -34,3 +34,18 @@ jobs:
     # Paso 5: Mostrar el contenido del CSV para verificar si se actualizó
     - name: Mostrar contenido del CSV
       run: cat data/test.csv
+
+    # Paso 6: Agregar los cambios del CSV
+    - name: Add changes to git
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "github-actions@github.com"
+        git add inpres_sismos/inpres_sismos/selenium/data/test.csv
+        git commit -m "Actualizar test.csv con nuevos datos de sismos"
+
+    # Paso 7: Hacer push de los cambios al repositorio
+    - name: Push changes to repository
+      run: |
+        git push https://github.com/${{ github.repository }} HEAD:${{ github.ref }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
