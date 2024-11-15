@@ -30,3 +30,7 @@ jobs:
     # Paso 4: Ejecutar el script de scraping con el archivo test.csv
     - name: Run Selenium scraper with test CSV
       run: python inpres_sismos/inpres_sismos/selenium/actualizar_sismos.py
+
+    # Paso 5: Mostrar el contenido del CSV para verificar si se actualizó
+    - name: Mostrar contenido del CSV
+      run: cat inpres_sismos/inpres_sismos/selenium/data/test.csv
