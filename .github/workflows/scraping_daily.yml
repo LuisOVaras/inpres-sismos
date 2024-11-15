@@ -2,7 +2,7 @@ name: Daily Selenium Scraping
 
 on:
   schedule:
-    - cron: '12 2 * * *'  # Ejecuta a las 01:30 UTC (lo que corresponde a 22:30 ART)
+    - cron: '20 2 * * *'
   workflow_dispatch:  # Permite ejecutar manualmente el flujo si es necesario
 
 jobs:
@@ -33,4 +33,4 @@ jobs:
 
     # Paso 5: Mostrar el contenido del CSV para verificar si se actualizó
     - name: Mostrar contenido del CSV
-      run: cat inpres_sismos/inpres_sismos/selenium/data/test.csv
+      run: cat data/test.csv
