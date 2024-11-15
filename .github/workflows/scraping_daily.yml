@@ -31,11 +31,8 @@ jobs:
     - name: Run Selenium scraper with test CSV
       run: python inpres_sismos/inpres_sismos/selenium/actualizar_sismos.py
 
-    # Paso 5: Mostrar el contenido del CSV para verificar si se actualizó
-    - name: Mostrar contenido del CSV
-      run: cat data/sismos.csv
 
-    # Paso 6: Agregar los cambios del CSV
+    # Paso 5: Agregar los cambios del CSV
     - name: Add changes to git
       run: |
         git config --global user.name "github-actions"
