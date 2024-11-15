@@ -79,7 +79,7 @@ finally:
 carpeta_data = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data'))
 
 # Ruta completa para el archivo CSV
-output_file = os.path.join(carpeta_data, "sismos.csv")
+output_file = os.path.join(carpeta_data, "test.csv")
 
 # Concatenar los nuevos datos al principio del archivo CSV
 csv_file_path = output_file
