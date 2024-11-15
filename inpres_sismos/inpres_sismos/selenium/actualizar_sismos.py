@@ -76,10 +76,11 @@ finally:
     driver.quit()
 
 # Ruta relativa desde la carpeta 'selenium' a la carpeta 'data'
-carpeta_data = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data'))
+#carpeta_data = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data'))
 
 # Ruta completa para el archivo CSV
-output_file = os.path.join(carpeta_data, "test.csv")
+#output_file = os.path.join(carpeta_data, "test.csv")
+output_file = os.path.join(os.path.dirname(__file__), 'data', 'test.csv')
 
 # Concatenar los nuevos datos al principio del archivo CSV
 csv_file_path = output_file
