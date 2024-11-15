@@ -2,7 +2,7 @@ name: Daily Selenium Scraping
 
 on:
   schedule:
-    - cron: '00 11 * * *'
+    - cron: '00 12 * * *'
   workflow_dispatch:  # Permite ejecutar manualmente el flujo si es necesario
 
 jobs:
