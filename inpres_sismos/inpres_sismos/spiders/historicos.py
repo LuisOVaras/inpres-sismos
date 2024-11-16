@@ -17,13 +17,16 @@ class SismosHistoricosSpider(scrapy.Spider):
         for row in rows:
             # Extraemos los datos de cada columna de la fila
             fecha_lugar = row.xpath('td[2]/strong/text()').get()
-            descripcion = row.xpath('td[2]/text()').get()
+            descripcion_completa = row.xpath('td[2]/text()').getall()  # Capturamos todo el texto fuera de <strong>
             latitud = row.xpath('td[3]/text()').get()
             longitud = row.xpath('td[4]/text()').get()
 
             # Limpiamos los datos si es necesario
             fecha_lugar = fecha_lugar.replace(':', '') if fecha_lugar else ''
+            
+            descripcion = " ".join([text.strip() for text in descripcion_completa]).strip() if descripcion_completa else ''
             descripcion = descripcion.replace(':', '') if descripcion else ''
+            
             # Limpiamos las comillas y las comas
             latitud = latitud.strip().replace('"', '').replace(",", ".") if latitud else None
             longitud = longitud.strip().replace('"', '').replace(",", ".") if longitud else None
