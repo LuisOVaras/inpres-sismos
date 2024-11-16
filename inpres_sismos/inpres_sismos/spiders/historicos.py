@@ -22,14 +22,17 @@ class SismosHistoricosSpider(scrapy.Spider):
             longitud = row.xpath('td[4]/text()').get()
 
             # Limpiamos los datos si es necesario
-            fecha_lugar = fecha_lugar.strip() if fecha_lugar else ''
-            descripcion = descripcion.strip() if descripcion else ''
-            latitud = latitud.strip() if latitud else ''
-            longitud = longitud.strip() if longitud else ''
+            fecha_lugar = fecha_lugar.replace(':', '') if fecha_lugar else ''
+            descripcion = descripcion.replace(':', '') if descripcion else ''
+            # Limpiamos las comillas y las comas
+            latitud = latitud.strip().replace('"', '').replace(",", ".") if latitud else None
+            longitud = longitud.strip().replace('"', '').replace(",", ".") if longitud else None
+            
             
             try:
-                # Separador de provincia y fecha
-                fecha_texto, provincia = map(str.strip, fecha_lugar.split(','))
+                
+                # Separar fecha y provincia
+                fecha_texto, provincia = map(str.strip, fecha_lugar.split(',', 1))
                 
                 # Convertir la fecha a datetime
                 fecha_datetime = datetime.strptime(fecha_texto, '%d de %B de %Y')
