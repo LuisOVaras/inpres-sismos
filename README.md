@@ -37,6 +37,7 @@ El objetivo principal es ofrecer una herramienta accesible para consultar sismos
 ├── data/                       # Archivos CSV con datos de sismos.
 ├── .github/workflows/          # Configuración de GitHub Actions para la automatización.
 ├── inpres_sismos/              # Código relacionado con scraping y procesamiento.
+│   ├── db/                     # Scripts para crear la base de datos con SQLite
 │   ├── selenium/               # Scripts para scraping con Selenium.
 │   ├── spiders/                # Spider Scrapy para datos históricos.
 ├── app.py                      # Aplicación web de Streamlit.
