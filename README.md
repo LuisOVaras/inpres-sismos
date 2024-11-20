@@ -1,21 +1,44 @@
-# Proyecto de Scraping de Sismos - INPRES
+# Proyecto de Sismos - INPRES
 
-Este es un proyecto personal para obtener, mostrar y visualizar datos de sismos de la página oficial del INPRES (Instituto Nacional de Prevención Sísmica de Argentina). El objetivo es crear una aplicación web que permita consultar sismos actuales e históricos, con visualizaciones interactivas de la ubicación de los sismos usando GeoPandas.
+Este es un proyecto personal de análisis geoespacial que recopila, procesa y visualiza datos de sismos de la página oficial del INPRES (Instituto Nacional de Prevención Sísmica de Argentina). Utiliza web scraping para obtener información actualizada de los eventos sísmicos, la cual es almacenada, analizada y presentada en mapas interactivos. 
 
-## Características
+El objetivo principal es ofrecer una herramienta accesible para consultar sismos actuales e históricos, permitiendo a los usuarios explorar patrones geográficos y características clave de los sismos mediante visualizaciones interactivas generadas con GeoPandas y otras bibliotecas geoespaciales. Además, la aplicación incluye una funcionalidad automatizada para mantener los datos al día y mejorar la experiencia del análisis.
 
-- **Obtención de datos en tiempo real**: Los datos de sismos son obtenidos directamente del sitio web del INPRES mediante un proceso de web scraping utilizando Scrapy.
-- **Visualización de sismos**: Los datos de sismos históricos y actuales se muestran en una tabla interactiva en la aplicación.
-- **Mapa interactivo**: Los sismos se visualizan en un mapa utilizando GeoPandas, mostrando las ubicaciones exactas de los eventos sísmicos.
-- **Actualización automática**: Los datos se actualizan automáticamente una vez al día, garantizando que siempre se muestren los sismos más recientes.
-- **Actualización manual**: Los usuarios pueden actualizar los datos manualmente presionando un botón en la interfaz web.
+
+
+## Características principales
+
+- **Automatización diaria**: Los datos de sismos se extraen y actualizan automáticamente utilizando Selenium WebDriver.
+- **Visualización geográfica**: Mapeo de los sismos utilizando GeoPandas y tecnologías complementarias para enriquecer los mapas.
+- **Interfaz amigable**: Una aplicación web creada con Streamlit para que los usuarios puedan explorar los datos de manera interactiva.
+- **Base de datos**: Almacenamiento eficiente de los datos, utilizando SQLite como solución rápida y escalable.
 
 ## Tecnologías utilizadas
 
-- **Scrapy**: Para hacer el web scraping de la página INPRES y extraer los datos de los sismos.
-- **Streamlit**: Para construir la aplicación web que muestra los datos de manera interactiva.
-- **GeoPandas**: Para mostrar las ubicaciones de los sismos en un mapa.
-- **Pandas**: Para manejar y mostrar los datos en formato de tabla.
-- **Pandas**: Para el procesamiento de los datos y la visualización de los sismos en formato de tabla.
-- **Cron Jobs** (o una alternativa en la nube): Para automatizar la ejecución diaria del scraper.
+### Principales
+- **[Selenium WebDriver](https://www.selenium.dev/documentation/)**: Para la extracción automatizada de datos de una página web compleja.
+- **[Streamlit](https://streamlit.io/)**: Para crear una aplicación web interactiva y amigable.
+- **[GeoPandas](https://geopandas.org/)**: Para análisis y visualización geoespacial.
+- **[Matplotlib](https://matplotlib.org/)**: Para la creación de gráficos personalizados.
+- **[Pandas](https://pandas.pydata.org/)**: Para manipulación y análisis de datos tabulares.
+- **[Github Actions](https://github.com/features/actions)**: Para automatizar la ejecución diaria del scraper.
 
+### Complementarias
+- **[SQLite](https://www.sqlite.org/)**: Base de datos ligera para almacenar y consultar los datos de sismos.
+- **[Webdriver Manager](https://github.com/SergeyPirogov/webdriver_manager)**: Para gestionar automáticamente los drivers de Selenium.
+- **[Fiona/Shapely/Cartopy](https://github.com/Toblerity/Fiona)** *(Planeadas)*: Para enriquecer las visualizaciones geográficas y manejar geometrías complejas.
+
+### Secundarias
+- **[Scrapy](https://scrapy.org/)**: Utilizado solo en una etapa específica del proyecto para recopilar datos históricos.
+
+## Estructura del proyecto
+
+```plaintext
+├── data/                       # Archivos CSV con datos de sismos.
+├── .github/workflows/          # Configuración de GitHub Actions para la automatización.
+├── inpres_sismos/              # Código relacionado con scraping y procesamiento.
+│   ├── selenium/               # Scripts para scraping con Selenium.
+│   ├── spiders/                # Spider Scrapy para datos históricos.
+├── app.py                      # Aplicación web de Streamlit.
+├── requirements.txt            # Dependencias del proyecto.
+└── README.md                   # Documentación del proyecto.
