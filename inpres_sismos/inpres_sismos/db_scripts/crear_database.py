@@ -29,11 +29,20 @@ CREATE TABLE IF NOT EXISTS sismos (
 )
 """)
 
+# Crear índice único para evitar duplicados
+cursor.execute("""
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_sismos_unique
+    ON sismos (fecha, hora, latitud, longitud)
+    """)
+
+# Revertir el orden de los datos para que los más recientes queden al final
+sismos_df = sismos_df[::-1]  # Invertir el DataFrame
+
 # Poblar la tabla desde un archivo CSV
 # Insertar los datos en la tabla
 for index, row in sismos_df.iterrows():
     cursor.execute("""
-    INSERT INTO sismos (fecha, hora, latitud, longitud, profundidad, magnitud, provincia, sentido)
+    INSERT OR IGNORE INTO sismos (fecha, hora, latitud, longitud, profundidad, magnitud, provincia, sentido)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """, (row['fecha'], row['hora'], row['latitud'], row['longitud'], row['profundidad'], row['magnitud'], row['provincia'], row['sentido']))
     
