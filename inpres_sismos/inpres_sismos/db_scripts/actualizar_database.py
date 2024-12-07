@@ -1,43 +1,36 @@
-import sqlite3
 import pandas as pd
+import sqlite3
 
-# Ruta a la base de datos SQLite
-DATABASE_PATH = '..\..\..\data\sismos.db' # ruta donde se encuentra tu db
-CSV_PATH = '..\..\..\data\sismos.csv'  # ruta donde se encuentra tu archivo CSV
+# Leer el CSV con los datos nuevos (asumo que ya tienes los nuevos datos listos en 'sismos_nuevos.csv')
+sismos_nuevos_df = pd.read_csv("..\..\..\data\sismos.csv")
 
-# Función para conectar a la base de datos SQLite
-def conectar_db():
-    conn = sqlite3.connect(DATABASE_PATH)
-    return conn
+# Convertir la columna 'fecha' de 'DD/MM/YYYY' a 'YYYY-MM-DD'
+sismos_nuevos_df['fecha'] = pd.to_datetime(sismos_nuevos_df['fecha'], format='%d/%m/%Y').dt.strftime('%Y-%m-%d')
+# Convertir la columna 'sentido' a 1 (Sí) o 0 (No)
+sismos_nuevos_df['sentido'] = sismos_nuevos_df['sentido'].apply(lambda x: 1 if x == 'Si' else 0)
 
-# Función para leer el CSV (o los datos de Selenium) y devolver un DataFrame
-def leer_datos_csv():
-    # Leer el CSV con pandas (ajusta la ruta y parámetros según tu archivo)
-    df = pd.read_csv(CSV_PATH, parse_dates=['fecha'])
-    return df
+# Crear la conexión a SQLite
+conn = sqlite3.connect("..\..\..\data\sismos.db")
+cursor = conn.cursor()
 
-# Función para insertar datos en la base de datos
-def insertar_datos_en_db(df):
-    conn = conectar_db()
-    cursor = conn.cursor()
+# Revertir el orden de los datos nuevos para que los más recientes queden al final
+sismos_nuevos_df = sismos_nuevos_df[::-1]  # Invertir el DataFrame si es necesario
 
-    # Insertar datos fila por fila
-    for index, row in df.iterrows():
+# Insertar los datos solo si no están ya presentes (comparación por fecha, hora, latitud, longitud)
+for index, row in sismos_nuevos_df.iterrows():
+    # Verificar si el registro ya existe en la base de datos
+    cursor.execute("""
+    SELECT COUNT(*) FROM sismos WHERE fecha = ? AND hora = ? AND latitud = ? AND longitud = ?
+    """, (row['fecha'], row['hora'], row['latitud'], row['longitud']))
+    
+    if cursor.fetchone()[0] == 0:  # Si no existe, insertar
         cursor.execute("""
-            INSERT OR REPLACE INTO sismos (fecha, hora, latitud, longitud, profundidad, magnitud, provincia, sentido)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO sismos (fecha, hora, latitud, longitud, profundidad, magnitud, provincia, sentido)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (row['fecha'], row['hora'], row['latitud'], row['longitud'], row['profundidad'], row['magnitud'], row['provincia'], row['sentido']))
-    
-    # Commit para guardar los cambios y cerrar la conexión
-    conn.commit()
-    conn.close()
 
-# Main: ejecutar las funciones
-if __name__ == "__main__":
-    # Leer los nuevos datos desde el CSV (o donde sea que los tengas)
-    df_nuevos_datos = leer_datos_csv()
-    
-    # Insertar esos datos en la base de datos
-    insertar_datos_en_db(df_nuevos_datos)
-    
-    print("Base de datos actualizada con los nuevos datos.")
+# Confirmar los cambios
+conn.commit()
+
+# Cerrar la conexión
+conn.close()
