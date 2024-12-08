@@ -10,7 +10,7 @@ sismos_nuevos_df['fecha'] = pd.to_datetime(sismos_nuevos_df['fecha'], format='%d
 sismos_nuevos_df['sentido'] = sismos_nuevos_df['sentido'].apply(lambda x: 1 if x == 'Si' else 0)
 
 # Crear la conexión a SQLite
-conn = sqlite3.connect("..\..\..\data\sismos.db")
+conn = sqlite3.connect("../../../data/sismos.db")
 cursor = conn.cursor()
 
 # Revertir el orden de los datos nuevos para que los más recientes queden al final
