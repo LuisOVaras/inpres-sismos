@@ -1,0 +1,46 @@
+
+name: Daily Update DB
+
+on:
+  schedule:
+    - cron: '00 11 * * *'
+  workflow_dispatch:  # Permite ejecutar manualmente el flujo si es necesario
+
+jobs:
+  scraping:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Paso 1: Clonar el código del repositorio
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    # Paso 2: Configurar Python
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+
+    # Paso 3: Instalar dependencias necesarias para Selenium y otros módulos
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install sqlite3
+        pip install pandas
+
+
+    # Paso 7: Ejecutar el script para actualizar la base de datos con los datos más recientes del CSV
+    - name: Update SQLite database with new data
+      run: |
+        python inpres_sismos/inpres_sismos/db_scripts/actualizar_database.py
+
+    # Paso 8: Commit y Push de la base de datos actualizada
+    - name: Commit and push updated database
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "github-actions@github.com"
+        git add data/sismos.db  
+        git commit -m "Actualizar base de datos SQLite con nuevos sismos"
+        git push https://github.com/${{ github.repository }} HEAD:${{ github.ref }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
