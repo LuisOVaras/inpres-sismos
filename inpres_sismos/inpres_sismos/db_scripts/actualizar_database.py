@@ -2,7 +2,7 @@ import pandas as pd
 import sqlite3
 
 # Leer el CSV con los datos nuevos (asumo que ya tienes los nuevos datos listos en 'sismos_nuevos.csv')
-sismos_nuevos_df = pd.read_csv("..\..\..\data\sismos.csv")
+sismos_nuevos_df = pd.read_csv("../../../data/sismos.csv")
 
 # Convertir la columna 'fecha' de 'DD/MM/YYYY' a 'YYYY-MM-DD'
 sismos_nuevos_df['fecha'] = pd.to_datetime(sismos_nuevos_df['fecha'], format='%d/%m/%Y').dt.strftime('%Y-%m-%d')
