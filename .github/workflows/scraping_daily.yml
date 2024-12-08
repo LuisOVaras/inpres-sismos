@@ -2,7 +2,7 @@ name: Daily Selenium Scraping
 
 on:
   schedule:
-    - cron: '30 10 * * *'
+    - cron: '20 10 * * *'
   workflow_dispatch:  # Permite ejecutar manualmente el flujo si es necesario
 
 jobs:
@@ -44,22 +44,6 @@ jobs:
     # Paso 6: Hacer push de los cambios al repositorio
     - name: Push changes to repository
       run: |
-        git push https://github.com/${{ github.repository }} HEAD:${{ github.ref }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    # Paso 7: Ejecutar el script para actualizar la base de datos con los datos más recientes del CSV
-    - name: Update SQLite database with new data
-      run: |
-        python inpres_sismos/inpres_sismos/db_scripts/actualizar_database.py
-
-    # Paso 8: Commit y Push de la base de datos actualizada
-    - name: Commit and push updated database
-      run: |
-        git config --global user.name "github-actions"
-        git config --global user.email "github-actions@github.com"
-        git add data/sismos.db  # Agregar la base de datos actualizada
-        git commit -m "Actualizar base de datos SQLite con nuevos sismos"
         git push https://github.com/${{ github.repository }} HEAD:${{ github.ref }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
