@@ -39,7 +39,7 @@ jobs:
         git config --global user.name "github-actions"
         git config --global user.email "github-actions@github.com"
         git add data/sismos.db  
-        git commit -m "Actualizar base de datos SQLite con nuevos sismos"
+        git commit -m "Actualizar sismos.db"
         git push https://github.com/${{ github.repository }} HEAD:${{ github.ref }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
