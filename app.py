@@ -5,6 +5,7 @@ import folium
 from folium.plugins import HeatMap
 from streamlit_folium import st_folium
 import geopandas as gpd
+import urllib.request
 
 # Configuración inicial
 st.set_page_config(
@@ -13,24 +14,104 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-# Cargar el csv
-df_csv = pd.read_csv('data\sismos.csv')
+
+# URL del CSV en tu repositorio de GitHub
+GITHUB_CSV_URL = "https://raw.githubusercontent.com/LuisOVaras/inpres-sismos/refs/heads/main/data/sismos.csv"
+
+# URL del archivo SQLite en GitHub
+GITHUB_DB_URL = "https://github.com/LuisOVaras/inpres-sismos/raw/refs/heads/main/data/sismos.db"
+DB_FILE = "sismos.db"
+
+
 # Título de la página
-st.title("📊 Pagina Inicial")
+st.title("🌍 Visualización de Sismos")
+tab1, tab2, tab3, tab4 = st.tabs(['Mapa de calor','Mapa de Sismos','Mapa con Clusters','Estadísticas básicas'])
 
-# Menú de navegación
-st.sidebar.success("🔍 Navega por las secciones:")
-tab1, tab2, tab3, tab4 = st.tabs(['Mapa','datos','datos','datos'])
+@st.cache_data(ttl=3600)
+def descargar_db():
+    urllib.request.urlretrieve(GITHUB_DB_URL, DB_FILE)  # Descargar la base de datos
 
-# Función para cargar datos desde SQLite
-@st.cache_data
+descargar_db()  # Descargar la base de datos antes de abrirla
+
 def load_data():
-    conn = sqlite3.connect("data\sismos.db")  
+    conn = sqlite3.connect(DB_FILE)
     df = pd.read_sql_query("SELECT * FROM sismos", conn)
     conn.close()
     return df
 
 data = load_data()
+# Todos lod filtros para la pagina 1
+# Sidebar: Selección de rango de fechas
+st.sidebar.header("Filtros: ")
+
+    # Asegurar que la columna 'fecha' esté en formato datetime
+data['fecha'] = pd.to_datetime(data['fecha']).dt.date
+    
+    # Limpiar y convertir la columna 'profundidad' a float
+data['profundidad'] = data['profundidad'].str.replace(' Km', '', regex=False)  # Quitar ' Km'
+data['profundidad'] = pd.to_numeric(data['profundidad'], errors='coerce')  # Convertir a número
+    
+    # Eliminar filas con NaN en 'profundidad' si existen
+data = data.dropna(subset=['profundidad'])
+    # Redondea los valores a enteros y luego convierte a tipo 'int'
+data['profundidad'] = data['profundidad'].round().astype('int')
+
+
+    # Obtener la fecha mínima y máxima en los datos
+fecha_min = data['fecha'].min()
+fecha_max = data['fecha'].max()
+    
+    # Selector de fechas en el sidebar
+fecha_inicio, fecha_fin = st.sidebar.date_input(
+    "Selecciona el rango de fechas",
+    [fecha_max - pd.Timedelta(days=30), fecha_max],  # Últimos 30 días por defecto
+    min_value=fecha_min,
+    max_value=fecha_max
+)
+
+    # Filtrar el DataFrame según el rango de fechas
+sub_data = data[(data['fecha'] >= fecha_inicio) & (data['fecha'] <= fecha_fin)]
+    
+    # Ordenar los datos de forma descendente por fecha
+sub_data = sub_data.sort_values(by='fecha', ascending=False)
+sub_data = sub_data.set_index('id')
+    
+    # Obtener la fecha mínima y máxima en los datos
+magnitud_min = float(sub_data['magnitud'].min())
+magnitud_max  = float(sub_data['magnitud'].max())
+
+     # Selector de fechas en el sidebar
+magnitud = st.sidebar.slider(
+    "Selecciona el rango de magnitud: ",
+    min_value=magnitud_min,
+    max_value=magnitud_max,
+    value=(magnitud_min, magnitud_max)
+)
+    # Filtrar por magnitud
+sub_data = sub_data[(sub_data['magnitud'] >= magnitud[0]) & (sub_data['magnitud'] <= magnitud[1])]
+    
+if 'profundidad' in sub_data.columns:
+    profundidad_min = float(sub_data['profundidad'].min())
+    profundidad_max = float(sub_data['profundidad'].max())
+
+    profundidad = st.sidebar.slider("Selecciona el rango de profundidad (km):", 
+                                    min_value=profundidad_min, max_value=profundidad_max, 
+                                    value=(profundidad_min, profundidad_max))
+
+# 📍 FILTRO POR UBICACIÓN (EJEMPLO CON PROVINCIAS)
+if 'provincia' in sub_data.columns:
+    provincias = sub_data['provincia'].unique().tolist()
+    provincia_seleccionada = st.sidebar.multiselect("Filtrar por provincia:", provincias, default=provincias)
+
+    
+    # Filtrar por profundidad (si existe)
+if 'profundidad' in sub_data.columns:
+    sub_data = sub_data[(sub_data['profundidad'] >= profundidad[0]) & (sub_data['profundidad'] <= profundidad[1])]
+
+    # Filtrar por provincia (si existe la columna)
+if 'provincia' in sub_data.columns:
+    sub_data = sub_data[sub_data['provincia'].isin(provincia_seleccionada)]
+
 
 # Función para cargar datos como GeoDataFrame
 def load_geodata(df):
@@ -45,50 +126,34 @@ def load_geodata(df):
         return None
 
 
-def heat_map(tipoMapa):
-    # Conectar a la base de datos SQLite
-    conn = sqlite3.connect('data\sismos.db')
-    cursor = conn.cursor()
-
-    # Obtener los datos de los sismos actuales
-    cursor.execute("SELECT latitud, longitud, magnitud FROM sismos WHERE fecha >= DATE('now', '-30 days')")
-    data = cursor.fetchall()
+def heat_map(tipoMapa, sub_data):
 
     # Convertir los datos a un DataFrame de pandas
-    df = pd.DataFrame(data, columns=['latitud', 'longitud', 'magnitud'])
-    
+    df = pd.DataFrame(sub_data, columns=['latitud', 'longitud', 'magnitud'])
 
-    # Crear el mapa base con el estilo seleccionado y la atribución correspondiente
+    # Crear el mapa base con el estilo seleccionado
     mapa = folium.Map(location=[-38.4161, -63.6167], zoom_start=4, tiles=tipoMapa)
 
-    # Agregar el mapa de calor con mayor opacidad (0.5)
-    heat_data = [[row['latitud'], row['longitud'], row['magnitud']] for index, row in df.iterrows()]
-    HeatMap(heat_data, max_zoom=13, min_opacity=0.2, radius=15, blur=10, gradient={0.2: 'blue', 0.4: 'lime', 0.6: 'orange', 1: 'red'}).add_to(mapa)
+    # Verificar que hay datos antes de crear el heatmap
+    if not df.empty:
+        heat_data = [[row['latitud'], row['longitud'], row['magnitud']] for index, row in df.iterrows()]
+        HeatMap(heat_data, max_zoom=13, min_opacity=0.2, radius=15, blur=10, 
+                gradient={0.2: 'blue', 0.4: 'lime', 0.6: 'orange', 1: 'red'}).add_to(mapa)
 
-    # Cerrar la conexión
-    conn.close()
     return mapa
 
 with tab1:
-    # Mostrar el mapa
+    # Título y descripción
     st.markdown("#### A continuación se muestra un mapa de calor de los sismos del último mes: ")
-    tipoMapa = st.selectbox('Tipo de Mapa', options=['OpenStreetMap','Cartodb dark_matter', 'Cartodb Positron'])
-    
-    mapa = heat_map(tipoMapa)
+
+    # Mostrar mapa con opción de tipo de mapa
+    tipoMapa = st.selectbox('Tipo de Mapa', options=['OpenStreetMap', 'Cartodb dark_matter', 'Cartodb Positron'])
+    mapa = heat_map(tipoMapa, sub_data)
     st_folium(mapa, width=800, height=700)
-    
-    st.subheader("Sismos del ultimo mes registrados: ")
-    
-    # Asegúrate de que la columna 'fecha' esté en formato datetime
-    data['fecha'] = pd.to_datetime(data['fecha']).dt.date
 
-    # Obtener la fecha actual (sin tiempo) y calcular 30 días atrás
-    fecha_hoy = pd.Timestamp.now().date()
-    fecha_30_dias = fecha_hoy - pd.Timedelta(days=30)
-
-    # Filtrar el DataFrame
-    sub_data = data[data['fecha'] >= fecha_30_dias]
-
-    # Mostrar los resultados
-    st.write(f"Datos de los últimos 30 días (desde {fecha_30_dias}):")
+    # Mostrar los datos filtrados
+    st.subheader("Sismos registrados en el período seleccionado:")
+    sub_data = sub_data.style.format({'magnitud': '{:.1f}', 'latitud': '{:.3f}', 'longitud': '{:.3f}'})
+    st.write(f"Datos entre **{fecha_inicio}** y **{fecha_fin}**:")
     st.dataframe(sub_data, width=800)
+    
