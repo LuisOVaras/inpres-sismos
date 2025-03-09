@@ -16,3 +16,15 @@ st.set_page_config(
 # Título de la página
 st.title("📊 Análisis Sísmico")
 tab1, tab2, tab3, tab4 = st.tabs(['Tendencias Temporales','Distribución Geográfica','Comparación con Datos Históricos','Top Sismos Recientes'])
+
+# Función para cargar datos como GeoDataFrame
+def load_geodata(df):
+    if "longitud" in df.columns and "latitud" in df.columns:
+        return gpd.GeoDataFrame(
+            df,
+            geometry=gpd.points_from_xy(df["longitud"], df["latitud"]),
+            crs="EPSG:4326",
+        )
+    else:
+        st.warning("No se encontraron columnas de latitud y longitud en los datos.")
+        return None
