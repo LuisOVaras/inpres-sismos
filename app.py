@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 import folium
-from folium.plugins import HeatMap
+from folium.plugins import HeatMap, MarkerCluster
 from streamlit_folium import st_folium
 import geopandas as gpd
 import urllib.request
@@ -22,11 +22,6 @@ GITHUB_CSV_URL = "https://raw.githubusercontent.com/LuisOVaras/inpres-sismos/ref
 GITHUB_DB_URL = "https://github.com/LuisOVaras/inpres-sismos/raw/refs/heads/main/data/sismos.db"
 DB_FILE = "sismos.db"
 
-
-# Título de la página
-st.title("🌍 Visualización de Sismos")
-tab1, tab2, tab3, tab4 = st.tabs(['Mapa de calor','Mapa de Sismos','Mapa con Clusters','Estadísticas básicas'])
-
 @st.cache_data(ttl=3600)
 def descargar_db():
     urllib.request.urlretrieve(GITHUB_DB_URL, DB_FILE)  # Descargar la base de datos
@@ -40,6 +35,12 @@ def load_data():
     return df
 
 data = load_data()
+
+# Título de la página
+st.title("🌍 Visualización de Sismos")
+tab1, tab2, tab3, tab4 = st.tabs(['Mapa de calor','Mapa de Sismos','Mapa con Clusters','Estadísticas básicas'])
+
+
 # Todos lod filtros para la pagina 1
 # Sidebar: Selección de rango de fechas
 st.sidebar.header("Filtros: ")
@@ -113,26 +114,13 @@ if 'provincia' in sub_data.columns:
     sub_data = sub_data[sub_data['provincia'].isin(provincia_seleccionada)]
 
 
-# Función para cargar datos como GeoDataFrame
-def load_geodata(df):
-    if "longitud" in df.columns and "latitud" in df.columns:
-        return gpd.GeoDataFrame(
-            df,
-            geometry=gpd.points_from_xy(df["longitud"], df["latitud"]),
-            crs="EPSG:4326",
-        )
-    else:
-        st.warning("No se encontraron columnas de latitud y longitud en los datos.")
-        return None
+# Convertir los datos a un DataFrame de pandas
+df = pd.DataFrame(sub_data, columns=['latitud', 'longitud', 'magnitud','fecha','profundidad', 'provincia','sentido' ])
 
 
-def heat_map(tipoMapa, sub_data):
-
-    # Convertir los datos a un DataFrame de pandas
-    df = pd.DataFrame(sub_data, columns=['latitud', 'longitud', 'magnitud'])
-
+def heat_map(tipoMapa):
     # Crear el mapa base con el estilo seleccionado
-    mapa = folium.Map(location=[-38.4161, -63.6167], zoom_start=4, tiles=tipoMapa)
+    mapa = folium.Map(location=[-38, -65], zoom_start=4, tiles=tipoMapa)
 
     # Verificar que hay datos antes de crear el heatmap
     if not df.empty:
@@ -142,13 +130,39 @@ def heat_map(tipoMapa, sub_data):
 
     return mapa
 
+def circlemarker_map(tipoMapa):
+
+    # Crear mapa base
+    mapa = folium.Map(location=[-38, -65], zoom_start=4, tiles=tipoMapa)
+
+    
+    # Agregar puntos individuales
+    for _, row in df.iterrows():
+        popup_info = f"""
+        <b>Fecha:</b> {row['fecha']}<br>
+        <b>Magnitud:</b> {row['magnitud']}<br>
+        <b>Profundidad:</b> {row['profundidad']} km <br>
+        <b>Sentido:</b> {"Sí" if row['sentido'] == 1 else "No"}
+        """
+        folium.CircleMarker(
+            location=[row["latitud"], row["longitud"]],
+            radius=row["magnitud"] * 2,  # Ajusta el tamaño según la magnitud
+            color="red",
+            fill=True,
+            fill_color="red",
+            fill_opacity=0.6,
+            popup=folium.Popup(popup_info, max_width=300)
+        ).add_to(mapa)
+
+    return mapa
+
 with tab1:
     # Título y descripción
     st.markdown("#### A continuación se muestra un mapa de calor de los sismos del último mes: ")
 
     # Mostrar mapa con opción de tipo de mapa
     tipoMapa = st.selectbox('Tipo de Mapa', options=['OpenStreetMap', 'Cartodb dark_matter', 'Cartodb Positron'])
-    mapa = heat_map(tipoMapa, sub_data)
+    mapa = heat_map(tipoMapa)
     st_folium(mapa, width=800, height=700)
 
     # Mostrar los datos filtrados
@@ -157,3 +171,11 @@ with tab1:
     st.write(f"Datos entre **{fecha_inicio}** y **{fecha_fin}**:")
     st.dataframe(sub_data, width=800)
     
+with tab2:
+    # Título y descripción
+    st.markdown("#### A continuación se muestra un mapa de puntos de los sismos del último mes: ")
+    
+    # Mostrar mapa con opción de tipo de mapa
+    tipoMapa = st.selectbox('Tipo de Mapa', options=['OpenStreetMap', 'Cartodb dark_matter', 'Cartodb Positron'], key = "count")
+    mapa = circlemarker_map(tipoMapa)
+    st_folium(mapa, width=800, height=700)
