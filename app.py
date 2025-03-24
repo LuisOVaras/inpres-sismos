@@ -29,10 +29,10 @@ def load_data():
         df['fecha'] = pd.to_datetime(df['fecha']).dt.date  # Convertir fecha a datetime.date
         df["hora"] = pd.to_datetime(df["hora"], format='%H:%M:%S', errors="coerce").dt.time  # Convertir a time
         df['profundidad'] = df['profundidad'].str.replace(' Km', '', regex=False).astype(float)  # Convertir profundidad
-        df["magnitud"] = pd.to_numeric(df["magnitud"], errors="coerce")  # Convertir a numérico
-        df["latitud"] = pd.to_numeric(df["latitud"], errors="coerce")  # Convertir a numérico
-        df["longitud"] = pd.to_numeric(df["longitud"], errors="coerce")  # Convertir a numérico
-        return df.dropna(subset=["latitud", "longitud"])  # Eliminar filas sin coordenadas
+        cols_a_convertir = ["magnitud", "latitud", "longitud"]
+        df[cols_a_convertir] = df[cols_a_convertir].apply(pd.to_numeric, errors="coerce")
+
+        return df.dropna(subset=["latitud", "longitud", 'provincia'])  # Eliminar filas sin coordenadas
     except Exception as e:
         st.error(f"Error al cargar los datos: {e}")
         return pd.DataFrame()  # Retornar DF vacío en caso de error
@@ -103,6 +103,9 @@ sub_data = sub_data[(sub_data['magnitud'] >= magnitud[0]) & (sub_data['magnitud'
 if 'profundidad' in sub_data.columns:
     profundidad_min = float(sub_data['profundidad'].min())
     profundidad_max = float(sub_data['profundidad'].max())
+    if profundidad_min == profundidad_max:
+        profundidad_min = max(0, profundidad_min - 1)  # Evitar slider con un solo valor
+        profundidad_max += 1
 
     profundidad = st.sidebar.slider("Selecciona el rango de profundidad (km):", 
                                     min_value=profundidad_min, max_value=profundidad_max, 
@@ -125,6 +128,20 @@ if 'provincia' in sub_data.columns:
 
 # Convertir los datos a un DataFrame de pandas
 df = pd.DataFrame(sub_data, columns=['latitud', 'longitud', 'magnitud','fecha','profundidad', 'provincia','sentido' ])
+
+def get_color(magnitude):
+        
+    if (magnitude > 9.0): return "black"
+    elif (magnitude >= 8.0): return "purple"
+    elif (magnitude >= 7.0): return "darkred"
+    elif (magnitude >= 6.0): return "red"
+    elif (magnitude >= 5.0): return "orange"
+    elif (magnitude >= 4.0): return "darkgreen"
+    elif (magnitude >= 3.0): return "green"
+    elif (magnitude >= 2.0): return "cadetblue"
+    elif (magnitude >= 1.0): return "blue"
+    return "lightgray"
+
 
 
 def heat_map(tipoMapa):
@@ -156,10 +173,10 @@ def circlemarker_map(tipoMapa):
         folium.CircleMarker(
             location=[row["latitud"], row["longitud"]],
             radius=row["magnitud"] * 2,  # Ajusta el tamaño según la magnitud
-            color="red",
+            color=get_color(row["magnitud"]),
             fill=True,
-            fill_color="red",
-            fill_opacity=0.6,
+            fill_color= get_color(row["magnitud"]),
+            fill_opacity=0.7,
             popup=folium.Popup(popup_info, max_width=300)
         ).add_to(mapa)
 
@@ -206,54 +223,56 @@ def estadisticas_basicas(sub_data):
 if tab_seleccionada == 'Mapa de calor':
     st.write("Cargando Mapa de Calor...")
         # Título y descripción
-    st.markdown("#### A continuación se muestra un mapa de calor de los sismos del último mes: ")
+    st.markdown("#### A continuación se muestra un mapa de calor de los sismos registrados en el período seleccionado: ")
+    st.write(f"Datos entre **{fecha_inicio}** y **{fecha_fin}**:")
         # Mostrar mapa con opción de tipo de mapa
     tipoMapa = st.selectbox('Tipo de Mapa', options=['OpenStreetMap', 'Cartodb dark_matter', 'Cartodb Positron'])
     mapa = heat_map(tipoMapa)
-    st_folium(mapa, width=800, height=700)
+    st_folium(mapa, width="100%", height=500)
 
         # Mostrar los datos filtrados
     pd.set_option("styler.render.max_elements", 600000)
     st.subheader("Sismos registrados en el período seleccionado:")
     sub_data = sub_data.style.format({'magnitud': '{:.1f}', 'latitud': '{:.3f}', 'longitud': '{:.3f}'})
     st.write(f"Datos entre **{fecha_inicio}** y **{fecha_fin}**:")
-    st.dataframe(sub_data, width=800)
+    st.dataframe(sub_data, use_container_width=True)
 
 elif tab_seleccionada == 'Mapa de Puntos':
     st.write("Cargando Mapa de Puntos...")
         # Título y descripción
-    st.markdown("#### A continuación se muestra un mapa de puntos de los sismos del último mes: ")
+    st.markdown("#### A continuación se muestra un mapa de puntos de los sismos registrados en el período seleccionado: ")
+    st.write(f"Datos entre **{fecha_inicio}** y **{fecha_fin}**:")
             
         # Mostrar mapa con opción de tipo de mapa
     tipoMapa = st.selectbox('Tipo de Mapa', options=['OpenStreetMap', 'Cartodb dark_matter', 'Cartodb Positron'], key = "tab2")
     mapa = circlemarker_map(tipoMapa)
-    st_folium(mapa, width=800, height=700)
+    st_folium(mapa, width="100%", height=500)
 
 elif tab_seleccionada == 'Mapa con Clusters':
     st.write("Cargando Mapa con Clusters...")
         # Título y descripción
-    st.markdown("#### A continuación se muestra un mapa de puntos de los sismos del último mes: ")
+    st.markdown("#### A continuación se muestra un mapa de puntos de los sismos registrados en el período seleccionado: ")
             
         # Mostrar mapa con opción de tipo de mapa
     tipoMapa = st.selectbox('Tipo de Mapa', options=['OpenStreetMap', 'Cartodb dark_matter', 'Cartodb Positron'], key = "tab3")
     mapa = markercluster_map(tipoMapa)
-    st_folium(mapa, width=800, height=700)
+    st_folium(mapa, width="100%", height=500)
 
 elif tab_seleccionada == 'Estadísticas básicas':
     st.write("Cargando Estadísticas básicas...")
-
+    st.write(f"Datos entre **{fecha_inicio}** y **{fecha_fin}**:")
         # Mostrar título de la tab
     st.title("Estadísticas Rápidas de los Sismos")
 
         # Pasar los datos ya filtrados a la función
     estadisticas_basicas(sub_data)
             
-    pd.set_option("styler.render.max_elements", 700000)
+    #pd.set_option("styler.render.max_elements", 700000)
         # Mostrar los datos filtrados
     st.subheader("Sismos registrados en el período seleccionado:")
     sub_data = sub_data.style.format({'magnitud': '{:.1f}', 'latitud': '{:.3f}', 'longitud': '{:.3f}'})
     st.write(f"Datos entre **{fecha_inicio}** y **{fecha_fin}**:")
-    st.dataframe(sub_data, width=800)
+    st.dataframe(sub_data, use_container_width=True)
     
     
 st.markdown("---")  # Línea divisoria
