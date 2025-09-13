@@ -31,6 +31,9 @@ El objetivo principal es ofrecer una herramienta accesible para consultar sismos
 ### Secundarias
 - **[Scrapy](https://scrapy.org/)**: Utilizado solo en una etapa específica del proyecto para recopilar datos históricos.
 
+#### PD Dejó de actualizar sismos a partir del ultimo commit en la carpeta data por que siguen haciendo desastres en la pagina principal
+
+
 ## Estructura del proyecto
 
 ```plaintext
