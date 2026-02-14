@@ -1,279 +1,142 @@
 import streamlit as st
 import pandas as pd
-import sqlite3
-import folium
-from folium.plugins import HeatMap, MarkerCluster
-from streamlit_folium import st_folium
-import geopandas as gpd
-import urllib.request
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime, timedelta
 
-# Configuración inicial
+# Configuración inicial - Premium Design
 st.set_page_config(
-    page_title="Sismos en Argentina",
-    page_icon="🌎",
+    page_title="Argentina Sismos - Dashboard",
+    page_icon="🌋",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
+# Estilo CSS personalizado para aspecto Premium
+st.markdown("""
+<style>
+    .main {
+        background-color: #f8f9fa;
+    }
+    .stMetric {
+        background-color: #ffffff;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # URL del CSV en tu repositorio de GitHub
 GITHUB_CSV_URL = "https://raw.githubusercontent.com/LuisOVaras/inpres-sismos/refs/heads/main/data/sismos.csv"
-
-# URL del archivo SQLite en GitHub
-GITHUB_DB_URL = "https://github.com/LuisOVaras/inpres-sismos/raw/refs/heads/main/data/sismos.db"
-DB_FILE = "sismos.db"
 
 @st.cache_data(ttl=3600)
 def load_data():
     try:
+        # Intentar cargar desde CSV (GitHub)
         df = pd.read_csv(GITHUB_CSV_URL)
-        df['fecha'] = pd.to_datetime(df['fecha']).dt.date  # Convertir fecha a datetime.date
-        df["hora"] = pd.to_datetime(df["hora"], format='%H:%M:%S', errors="coerce").dt.time  # Convertir a time
-        df['profundidad'] = df['profundidad'].str.replace(' Km', '', regex=False).astype(float)  # Convertir profundidad
+        df['fecha'] = pd.to_datetime(df['fecha'], format='%d/%m/%Y').dt.date
+        df["hora"] = pd.to_datetime(df["hora"], format='%H:%M:%S', errors="coerce").dt.time
+        
+        # Limpieza de profundidad
+        if df['profundidad'].dtype == object:
+            df['profundidad'] = df['profundidad'].str.replace(' Km', '', regex=False).astype(float)
+        
         cols_a_convertir = ["magnitud", "latitud", "longitud"]
         df[cols_a_convertir] = df[cols_a_convertir].apply(pd.to_numeric, errors="coerce")
 
-        return df.dropna(subset=["latitud", "longitud", 'provincia'])  # Eliminar filas sin coordenadas
+        return df.dropna(subset=["latitud", "longitud", 'provincia'])
     except Exception as e:
         st.error(f"Error al cargar los datos: {e}")
-        return pd.DataFrame()  # Retornar DF vacío en caso de error
+        return pd.DataFrame()
 
-# Cargar los datos desde el CSV
+# Cargar los datos
 data = load_data()
 
-# Si no hay datos, mostrar mensaje y detener ejecución
 if data.empty:
-    st.warning("No se pudieron cargar los datos de sismos. Intenta más tarde.")
+    st.warning("No se pudieron cargar los datos. Verifica la conexión.")
     st.stop()
-    
-# Título de la página
-st.title("🌍 Visualización de Sismos")
-# Sidebar para seleccionar la pestaña activa
-tab_seleccionada = st.sidebar.selectbox(
-    "Selecciona una vista",
-    ['Mapa de calor', 'Mapa de Puntos', 'Mapa con Clusters', 'Estadísticas básicas']
-)
-    
-    
-# Todos lod filtros para la pagina 1
-# Sidebar: Selección de rango de fechas
-st.sidebar.header("Filtros: ")
-st.sidebar.markdown("**¡Atención!** Para mapas se recomienda seleccionar un rango de fechas no mayor a 6 meses debido a la carga de datos.")
 
-    # Colocar fecha min y max
-fecha_min = data['fecha'].min()
+# --- SIDEBAR FILTROS ---
+st.sidebar.image("https://www.inpres.gob.ar/desktop/img/logo_inpres.png", width=200)
+st.sidebar.title("Filtros Globales")
+
+# Rango de fechas
 fecha_max = data['fecha'].max()
+fecha_min = data['fecha'].min()
+rango_default = (fecha_max - timedelta(days=30), fecha_max)
 
-fecha_predeterminada = [fecha_max - pd.Timedelta(days=30), fecha_max]
-    # Selector de fechas en el sidebar
-fecha_inicio, fecha_fin = st.sidebar.date_input(
-    "Selecciona el rango de fechas",
-    fecha_predeterminada,  # Últimos 30 días por defecto
+fecha_rango = st.sidebar.date_input(
+    "Rango de Fechas",
+    value=rango_default,
     min_value=fecha_min,
     max_value=fecha_max
 )
 
-    # Redondea los valores a enteros y luego convierte a tipo 'int'
-data['profundidad'] = data['profundidad'].round().astype('int')
-
-# Combinar las columnas de fecha y hora en una columna datetime
-data['fecha_hora'] = pd.to_datetime(data['fecha']) + pd.to_timedelta(data['hora'].astype(str))
-
-# Ordenar por la columna 'fecha_hora'
-data = data.sort_values(by='fecha_hora', ascending=False)
-# Eliminar la columna 'fecha_hora' del DataFrame final
-data = data.drop(columns=['fecha_hora'])
-
-    # Filtrar el DataFrame según el rango de fechas
-sub_data = data[(data['fecha'] >= fecha_inicio) & (data['fecha'] <= fecha_fin)]
-    
-    # Obtener la fecha mínima y máxima en los datos
-magnitud_min = float(sub_data['magnitud'].min())
-magnitud_max  = float(sub_data['magnitud'].max())
-
-     # Selector de fechas en el sidebar
-magnitud = st.sidebar.slider(
-    "Selecciona el rango de magnitud: ",
-    min_value=magnitud_min,
-    max_value=magnitud_max,
-    value=(magnitud_min, magnitud_max)
+# Magnitud Slider
+magnitud_range = st.sidebar.slider(
+    "Magnitud (Mw)",
+    min_value=float(data['magnitud'].min()),
+    max_value=float(data['magnitud'].max()),
+    value=(2.0, 9.0),
+    step=0.1
 )
-    # Filtrar por magnitud
-sub_data = sub_data[(sub_data['magnitud'] >= magnitud[0]) & (sub_data['magnitud'] <= magnitud[1])]
-    
-if 'profundidad' in sub_data.columns:
-    profundidad_min = float(sub_data['profundidad'].min())
-    profundidad_max = float(sub_data['profundidad'].max())
-    if profundidad_min == profundidad_max:
-        profundidad_min = max(0, profundidad_min - 1)  # Evitar slider con un solo valor
-        profundidad_max += 1
 
-    profundidad = st.sidebar.slider("Selecciona el rango de profundidad (km):", 
-                                    min_value=profundidad_min, max_value=profundidad_max, 
-                                    value=(profundidad_min, profundidad_max))
+# Provincia multiselect
+provincias = sorted(data['provincia'].unique().tolist())
+prov_sel = st.sidebar.multiselect("Provincias", provincias, default=[])
 
-# 📍 FILTRO POR UBICACIÓN (EJEMPLO CON PROVINCIAS)
-if 'provincia' in sub_data.columns:
-    provincias = sub_data['provincia'].unique().tolist()
-    provincia_seleccionada = st.sidebar.multiselect("Filtrar por provincia:", provincias, default=provincias)
+# Aplicar Filtros
+mask = (data['fecha'] >= fecha_rango[0]) & (data['fecha'] <= fecha_rango[1]) & \
+       (data['magnitud'] >= magnitud_range[0]) & (data['magnitud'] <= magnitud_range[1])
 
-    
-    # Filtrar por profundidad (si existe)
-if 'profundidad' in sub_data.columns:
-    sub_data = sub_data[(sub_data['profundidad'] >= profundidad[0]) & (sub_data['profundidad'] <= profundidad[1])]
+if prov_sel:
+    mask = mask & (data['provincia'].isin(prov_sel))
 
-    # Filtrar por provincia (si existe la columna)
-if 'provincia' in sub_data.columns:
-    sub_data = sub_data[sub_data['provincia'].isin(provincia_seleccionada)]
+df_filtered = data[mask]
 
+# --- MAIN LAYOUT ---
+st.title("🌋 Monitoreo Sísmico Argentina")
+st.markdown("Dashboard interactivo con datos en tiempo real de INPRES.")
 
-# Convertir los datos a un DataFrame de pandas
-df = pd.DataFrame(sub_data, columns=['latitud', 'longitud', 'magnitud','fecha','profundidad', 'provincia','sentido' ])
+# Métricas Principales
+col1, col2, col3, col4 = st.columns(4)
+with col1:
+    st.metric("Total Sismos", len(df_filtered))
+with col2:
+    st.metric("Max Magnitud", f"{df_filtered['magnitud'].max():.1f}")
+with col3:
+    st.metric("Profundidad Media", f"{df_filtered['profundidad'].mean():.0f} km")
+with col4:
+    last_date = df_filtered['fecha'].max()
+    st.metric("Último Registro", last_date.strftime('%d/%m/%Y') if not df_filtered.empty else "N/A")
 
-def get_color(magnitude):
-        
-    if (magnitude > 9.0): return "black"
-    elif (magnitude >= 8.0): return "purple"
-    elif (magnitude >= 7.0): return "darkred"
-    elif (magnitude >= 6.0): return "red"
-    elif (magnitude >= 5.0): return "orange"
-    elif (magnitude >= 4.0): return "darkgreen"
-    elif (magnitude >= 3.0): return "green"
-    elif (magnitude >= 2.0): return "cadetblue"
-    elif (magnitude >= 1.0): return "blue"
-    return "lightgray"
+# Mapa Interactivo con Plotly
+st.subheader("📍 Mapa de Localizaciones")
 
+if not df_filtered.empty:
+    fig_map = px.scatter_mapbox(
+        df_filtered,
+        lat="latitud",
+        lon="longitud",
+        size="magnitud",
+        color="magnitud",
+        color_continuous_scale=px.colors.sequential.YlOrRd,
+        hover_name="provincia",
+        hover_data=["fecha", "hora", "profundidad", "magnitud"],
+        zoom=3.5,
+        center={"lat": -38.4161, "lon": -63.6167},
+        height=600,
+        mapbox_style="carto-positron"
+    )
+    fig_map.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+    st.plotly_chart(fig_map, use_container_width=True)
+else:
+    st.info("No hay datos para los filtros seleccionados.")
 
+# Tabla de Datos Recientes
+st.subheader("📋 Registros Filtrados")
+st.dataframe(df_filtered.head(100), use_container_width=True)
 
-def heat_map(tipoMapa):
-    # Crear el mapa base con el estilo seleccionado
-    mapa = folium.Map(location=[-38, -65], zoom_start=4, tiles=tipoMapa)
-
-    # Verificar que hay datos antes de crear el heatmap
-    if not df.empty:
-        heat_data = [[row['latitud'], row['longitud'], row['magnitud']] for index, row in df.iterrows()]
-        HeatMap(heat_data, max_zoom=13, min_opacity=0.2, radius=15, blur=10, 
-                gradient={0.2: 'blue', 0.4: 'lime', 0.6: 'orange', 1: 'red'}).add_to(mapa)
-
-    return mapa
-
-def circlemarker_map(tipoMapa):
-
-    # Crear mapa base
-    mapa = folium.Map(location=[-38, -65], zoom_start=4, tiles=tipoMapa)
-
-    
-    # Agregar puntos individuales
-    for _, row in df.iterrows():
-        popup_info = f"""
-        <b>Fecha:</b> {row['fecha']}<br>
-        <b>Magnitud:</b> {row['magnitud']}<br>
-        <b>Profundidad:</b> {row['profundidad']} km <br>
-        <b>Sentido:</b> {"Sí" if row['sentido'] == 1 else "No"}
-        """
-        folium.CircleMarker(
-            location=[row["latitud"], row["longitud"]],
-            radius=row["magnitud"] * 2,  # Ajusta el tamaño según la magnitud
-            color=get_color(row["magnitud"]),
-            fill=True,
-            fill_color= get_color(row["magnitud"]),
-            fill_opacity=0.7,
-            popup=folium.Popup(popup_info, max_width=300)
-        ).add_to(mapa)
-
-    return mapa
-
-def markercluster_map(tipoMapa):
-    # Crear el mapa base con el estilo seleccionado
-    mapa = folium.Map(location=[-38, -65], zoom_start=4, tiles=tipoMapa)
-
-    # Agregar clusters
-    marker_cluster = MarkerCluster().add_to(mapa)
-    for _, row in df.iterrows():
-        folium.Marker(
-            location=[row["latitud"], row["longitud"]],
-            popup=f"<b>Magnitud:</b>{row['magnitud']}<br><b>Fecha:</b>{row['fecha']}<br><b>Profundidad:</b>{row['profundidad']}Km<br>",
-            icon=folium.Icon(color="blue", icon="info-sign")
-        ).add_to(marker_cluster)
-
-    return mapa
-
-def estadisticas_basicas(sub_data):
-            
-                # Calcular estadísticas rápidas
-    total_sismos = sub_data.shape[0]  # Número total de sismos en el rango seleccionado
-    promedio_magnitud = sub_data['magnitud'].mean()  # Promedio de magnitud
-    profundidad_media = sub_data['profundidad'].mean()  # Profundidad promedio
-
-            # Usar columnas para mostrar los metrics uno al lado del otro
-    col1, col2, col3 = st.columns(3)
-
-            # Mostrar las estadísticas en la tab
-    st.subheader("Estadísticas generales")
-            # Mostrar las métricas en las columnas
-    with col1:
-        st.metric("Número total de sismos", total_sismos)
-
-    with col2:
-        st.metric("Magnitud promedio", f"{promedio_magnitud:.2f}")
-
-    with col3:
-        st.metric("Profundidad media", f"{profundidad_media:.2f} km")
-        
-# Tabs
-if tab_seleccionada == 'Mapa de calor':
-    st.write("Cargando Mapa de Calor...")
-        # Título y descripción
-    st.markdown("#### A continuación se muestra un mapa de calor de los sismos registrados en el período seleccionado: ")
-    st.write(f"Datos entre **{fecha_inicio}** y **{fecha_fin}**:")
-        # Mostrar mapa con opción de tipo de mapa
-    tipoMapa = st.selectbox('Tipo de Mapa', options=['OpenStreetMap', 'Cartodb dark_matter', 'Cartodb Positron'])
-    mapa = heat_map(tipoMapa)
-    st_folium(mapa, width="100%", height=500)
-
-        # Mostrar los datos filtrados
-    pd.set_option("styler.render.max_elements", 600000)
-    st.subheader("Sismos registrados en el período seleccionado:")
-    sub_data = sub_data.style.format({'magnitud': '{:.1f}', 'latitud': '{:.3f}', 'longitud': '{:.3f}'})
-    st.write(f"Datos entre **{fecha_inicio}** y **{fecha_fin}**:")
-    st.dataframe(sub_data, use_container_width=True)
-
-elif tab_seleccionada == 'Mapa de Puntos':
-    st.write("Cargando Mapa de Puntos...")
-        # Título y descripción
-    st.markdown("#### A continuación se muestra un mapa de puntos de los sismos registrados en el período seleccionado: ")
-    st.write(f"Datos entre **{fecha_inicio}** y **{fecha_fin}**:")
-            
-        # Mostrar mapa con opción de tipo de mapa
-    tipoMapa = st.selectbox('Tipo de Mapa', options=['OpenStreetMap', 'Cartodb dark_matter', 'Cartodb Positron'], key = "tab2")
-    mapa = circlemarker_map(tipoMapa)
-    st_folium(mapa, width="100%", height=500)
-
-elif tab_seleccionada == 'Mapa con Clusters':
-    st.write("Cargando Mapa con Clusters...")
-        # Título y descripción
-    st.markdown("#### A continuación se muestra un mapa de puntos de los sismos registrados en el período seleccionado: ")
-            
-        # Mostrar mapa con opción de tipo de mapa
-    tipoMapa = st.selectbox('Tipo de Mapa', options=['OpenStreetMap', 'Cartodb dark_matter', 'Cartodb Positron'], key = "tab3")
-    mapa = markercluster_map(tipoMapa)
-    st_folium(mapa, width="100%", height=500)
-
-elif tab_seleccionada == 'Estadísticas básicas':
-    st.write("Cargando Estadísticas básicas...")
-    st.write(f"Datos entre **{fecha_inicio}** y **{fecha_fin}**:")
-        # Mostrar título de la tab
-    st.title("Estadísticas Rápidas de los Sismos")
-
-        # Pasar los datos ya filtrados a la función
-    estadisticas_basicas(sub_data)
-            
-    #pd.set_option("styler.render.max_elements", 700000)
-        # Mostrar los datos filtrados
-    st.subheader("Sismos registrados en el período seleccionado:")
-    sub_data = sub_data.style.format({'magnitud': '{:.1f}', 'latitud': '{:.3f}', 'longitud': '{:.3f}'})
-    st.write(f"Datos entre **{fecha_inicio}** y **{fecha_fin}**:")
-    st.dataframe(sub_data, use_container_width=True)
-    
-    
-st.markdown("---")  # Línea divisoria
-st.markdown("📌 **Para más información sobre los sismos en Argentina, visita:** [INPRES](https://www.inpres.gob.ar)")
+st.markdown("---")
+st.caption("Datos obtenidos automáticamente de INPRES Argentina.")
