@@ -24,24 +24,37 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install selenium
-        pip install webdriver-manager
-        pip install pandas
+        pip install selenium webdriver-manager pandas supabase
 
-    # Paso 4: Ejecutar el script de scraping con el archivo test.csv
-    - name: Run Selenium scraper with test CSV
+    # Paso 4: Ejecutar el script de scraping (actualiza sismos.csv)
+    - name: Run Selenium scraper
       run: python inpres_sismos/inpres_sismos/selenium/actualizar_sismos.py
 
+    # Paso 5: Actualizar base de datos SQLite
+    - name: Update SQLite database
+      run: python inpres_sismos/inpres_sismos/db_scripts/actualizar_database.py
 
-    # Paso 5: Agregar los cambios del CSV
+    # Paso 6: Sincronizar con Supabase (opcional, requiere Secrets)
+    - name: Sync with Supabase
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      run: |
+        if [ -n "$SUPABASE_URL" ]; then
+          python inpres_sismos/inpres_sismos/db_scripts/actualizar_supabase.py
+        else
+          echo "Supabase secrets not found, skipping sync."
+        fi
+
+    # Paso 7: Agregar los cambios (CSV y DB)
     - name: Add changes to git
       run: |
         git config --global user.name "github-actions"
         git config --global user.email "github-actions@github.com"
-        git add data/sismos.csv
-        git commit -m "Actualizar sismos.csv"
+        git add data/sismos.csv data/sismos.db
+        git commit -m "Actualizar sismos.csv y sismos.db" || echo "No hay cambios para commitear"
 
-    # Paso 6: Hacer push de los cambios al repositorio
+    # Paso 8: Hacer push de los cambios al repositorio
     - name: Push changes to repository
       run: |
         git push https://github.com/${{ github.repository }} HEAD:${{ github.ref }}
