@@ -2,42 +2,36 @@ import os
 import pandas as pd
 from supabase import create_client, Client
 from datetime import datetime
+import time
 from dotenv import load_dotenv
 
-# Cargar variables desde .env (útil para pruebas locales)
+# Cargar variables desde .env
 load_dotenv()
 
 # Configuración
+# Puedes ponerlas aquí para la migración inicial manual o usar variables de entorno
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") # Usar Service Role Key para inserts
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 csv_path = os.path.join(base_dir, '..', '..', '..', 'data', 'sismos.csv')
 
-def main():
+def migrate():
     if not SUPABASE_URL or not SUPABASE_KEY:
-        print("Error: SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY no configuradas.")
+        print("Error: Configura SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY")
         return
 
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-    # Leer CSV
-    if not os.path.exists(csv_path):
-        print(f"Error: No se encuentra {csv_path}")
-        return
-
+    print(f"Leyendo datos desde {csv_path}...")
     df = pd.read_csv(csv_path)
     
-    # Formatear datos para Supabase
-    df_to_upload = df.copy()
-    # Convertir fecha a formato ISO YYYY-MM-DD para Supabase 
-    df_to_upload['fecha_iso'] = pd.to_datetime(df_to_upload['fecha'], format='%d/%m/%Y').dt.strftime('%Y-%m-%d')
-    # Sentido a booleano
-    df_to_upload['sentido_bool'] = df_to_upload['sentido'].apply(lambda x: True if x == 'Si' else False)
+    # Formatear datos
+    df['fecha_iso'] = pd.to_datetime(df['fecha'], format='%d/%m/%Y').dt.strftime('%Y-%m-%d')
+    df['sentido_bool'] = df['sentido'].apply(lambda x: True if x == 'Si' else False)
     
     records = []
-    # Procesar solo los 100 más recientes para el workflow diario
-    for _, row in df_to_upload.head(100).iterrows(): 
+    for _, row in df.iterrows():
         # Helper para limpiar floats y convertirlos a None si son NaN o inválidos
         def clean_float(val):
             try:
@@ -59,22 +53,21 @@ def main():
             "sentido": bool(row['sentido_bool']) if pd.notna(row['sentido_bool']) else False
         })
 
-    print(f"Sincronizando {len(records)} registros con Supabase (Bulk Upsert)...")
-    
-    try:
-        # Intentar upsert masivo para mayor eficiencia
-        response = supabase.table("sismos").upsert(
-            records, 
-            on_conflict="fecha,hora,latitud,longitud"
-        ).execute()
-        print(f"Sincronización exitosa: {len(records)} registros procesados.")
-    except Exception as e:
-        print("-" * 30)
-        print("ERROR CRÍTICO AL SINCRONIZAR CON SUPABASE")
-        print(f"Detalle del error: {e}")
-        print("-" * 30)
+    total = len(records)
+    batch_size = 500
+    print(f"Iniciando migración de {total} registros en lotes de {batch_size}...")
 
-    print("Proceso finalizado.")
+    for i in range(0, total, batch_size):
+        batch = records[i:i+batch_size]
+        try:
+            supabase.table("sismos").upsert(batch, on_conflict="fecha,hora,latitud,longitud").execute()
+            print(f"  Procesados: {min(i + batch_size, total)}/{total}")
+        except Exception as e:
+            print(f"  Error en lote {i}-{i+batch_size}: {e}")
+        
+        time.sleep(0.5) # Evitar saturar la API
+
+    print("\n¡Migración inicial completada!")
 
 if __name__ == "__main__":
-    main()
+    migrate()
