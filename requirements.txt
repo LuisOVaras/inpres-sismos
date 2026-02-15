@@ -1,9 +1,21 @@
-folium==0.18.0
-geopandas==0.14.1
-pandas>=2.0.3
+# Core Dependencies
+selenium==4.16.0
+webdriver-manager==4.0.2
+pandas==3.0.0
 Scrapy==2.11.2
-selenium>=4.0.0
+
+
+# Database
+supabase==2.3.0
+python-dotenv==1.0.0
 SQLAlchemy==2.0.36
+
+# Streamlit (para la app de visualización)
 streamlit==1.38.0
-streamlit_folium==0.23.2
-webdriver_manager==4.0.2
+plotly==5.18.0
+folium==0.18.0
+streamlit-folium==0.23.2
+geopandas==0.14.1
+
+# Utilities
+requests==2.31.0

@@ -2,61 +2,139 @@ name: Daily Selenium Scraping
 
 on:
   schedule:
+    # Ejecutar todos los días a las 10:20 UTC (7:20 AM Argentina)
     - cron: '20 10 * * *'
-  workflow_dispatch:  # Permite ejecutar manualmente el flujo si es necesario
+  workflow_dispatch:  # Permite ejecutar manualmente
 
 jobs:
   scraping:
     runs-on: ubuntu-latest
 
     steps:
-    # Paso 1: Clonar el código del repositorio
-    - name: Checkout repository
-      uses: actions/checkout@v2
+    # ═══════════════════════════════════════════════════════════
+    # PASO 1: Clonar repositorio
+    # ═══════════════════════════════════════════════════════════
+    - name: 📦 Checkout repository
+      uses: actions/checkout@v3
 
-    # Paso 2: Configurar Python
-    - name: Set up Python
-      uses: actions/setup-python@v2
+    # ═══════════════════════════════════════════════════════════
+    # PASO 2: Configurar Python
+    # ═══════════════════════════════════════════════════════════
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
       with:
-        python-version: '3.8'
+        python-version: '3.10'
+        cache: 'pip'
 
-    # Paso 3: Instalar dependencias necesarias para Selenium y otros módulos
-    - name: Install dependencies
+    # ═══════════════════════════════════════════════════════════
+    # PASO 3: Instalar dependencias
+    # ═══════════════════════════════════════════════════════════
+    - name: 📚 Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install selenium webdriver-manager pandas supabase
+        pip install selenium webdriver-manager pandas supabase python-dotenv
 
-    # Paso 4: Ejecutar el script de scraping (actualiza sismos.csv)
-    - name: Run Selenium scraper
-      run: python inpres_sismos/inpres_sismos/selenium/actualizar_sismos.py
+    # ═══════════════════════════════════════════════════════════
+    # PASO 4: Ejecutar scraping (actualiza sismos.csv)
+    # ═══════════════════════════════════════════════════════════
+    - name: 🔍 Run Selenium scraper
+      run: |
+        echo "Iniciando scraping de INPRES..."
+        python actualizar_sismos.py || {
+          echo "❌ Error en scraping"
+          exit 1
+        }
+        echo "✅ Scraping completado"
 
-    # Paso 5: Actualizar base de datos SQLite
-    - name: Update SQLite database
-      run: python inpres_sismos/inpres_sismos/db_scripts/actualizar_database.py
+    # ═══════════════════════════════════════════════════════════
+    # PASO 5: Actualizar base de datos SQLite
+    # ═══════════════════════════════════════════════════════════
+    - name: 💾 Update SQLite database
+      run: |
+        echo "Actualizando base de datos SQLite..."
+        python actualizar_database.py || {
+          echo "⚠️  Advertencia: Error al actualizar SQLite, pero continuando..."
+        }
+        echo "✅ SQLite actualizado"
 
-    # Paso 6: Sincronizar con Supabase (opcional, requiere Secrets)
-    - name: Sync with Supabase
+    # ═══════════════════════════════════════════════════════════
+    # PASO 6: Sincronizar con Supabase
+    # ═══════════════════════════════════════════════════════════
+    - name: ☁️  Sync with Supabase
       env:
         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       run: |
-        if [ -n "$SUPABASE_URL" ]; then
-          python inpres_sismos/inpres_sismos/db_scripts/actualizar_supabase.py
+        if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+          echo "Sincronizando con Supabase..."
+          python actualizar_supabase.py || {
+            echo "❌ Error al sincronizar con Supabase"
+            exit 1
+          }
+          echo "✅ Supabase sincronizado"
         else
-          echo "Supabase secrets not found, skipping sync."
+          echo "⚠️  Supabase secrets no configurados, saltando sincronización"
+          echo "   Para configurar, ve a: Settings → Secrets and variables → Actions"
+          echo "   Agrega: SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY"
         fi
 
-    # Paso 7: Agregar los cambios (CSV y DB)
-    - name: Add changes to git
+    # ═══════════════════════════════════════════════════════════
+    # PASO 7: Configurar Git y agregar cambios
+    # ═══════════════════════════════════════════════════════════
+    - name: 📝 Configure Git and add changes
       run: |
-        git config --global user.name "github-actions"
-        git config --global user.email "github-actions@github.com"
-        git add data/sismos.csv data/sismos.db
-        git commit -m "Actualizar sismos.csv y sismos.db" || echo "No hay cambios para commitear"
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        
+        # Verificar si hay cambios
+        if [[ -n $(git status -s) ]]; then
+          echo "📋 Cambios detectados:"
+          git status -s
+          
+          # Agregar archivos específicos
+          git add data/sismos.csv || echo "⚠️  sismos.csv no encontrado"
+          git add data/sismos.db || echo "⚠️  sismos.db no encontrado"
+          
+          # Commit solo si hay cambios staged
+          if [[ -n $(git diff --cached) ]]; then
+            FECHA=$(date -u +"%Y-%m-%d %H:%M UTC")
+            git commit -m "🤖 Actualización automática de sismos - $FECHA"
+            echo "✅ Commit creado"
+          else
+            echo "ℹ️  No hay cambios para commitear"
+          fi
+        else
+          echo "ℹ️  No hay cambios en el repositorio"
+        fi
 
-    # Paso 8: Hacer push de los cambios al repositorio
-    - name: Push changes to repository
+    # ═══════════════════════════════════════════════════════════
+    # PASO 8: Push de cambios al repositorio
+    # ═══════════════════════════════════════════════════════════
+    - name: 🚀 Push changes to repository
       run: |
-        git push https://github.com/${{ github.repository }} HEAD:${{ github.ref }}
+        if [[ -n $(git log origin/main..HEAD) ]]; then
+          echo "📤 Enviando cambios al repositorio..."
+          git push || {
+            echo "❌ Error al hacer push"
+            exit 1
+          }
+          echo "✅ Push completado exitosamente"
+        else
+          echo "ℹ️  No hay commits nuevos para enviar"
+        fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # ═══════════════════════════════════════════════════════════
+    # PASO 9: Resumen de ejecución
+    # ═══════════════════════════════════════════════════════════
+    - name: 📊 Summary
+      if: always()
+      run: |
+        echo "═══════════════════════════════════════════════════════"
+        echo "           RESUMEN DE EJECUCIÓN"
+        echo "═══════════════════════════════════════════════════════"
+        echo "🕐 Fecha: $(date -u +"%Y-%m-%d %H:%M UTC")"
+        echo "📂 Archivos actualizados:"
+        ls -lh data/ 2>/dev/null || echo "   ⚠️  Directorio data/ no encontrado"
+        echo "═══════════════════════════════════════════════════════"

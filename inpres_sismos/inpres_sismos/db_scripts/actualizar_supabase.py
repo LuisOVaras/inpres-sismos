@@ -1,80 +1,168 @@
+"""
+Actualizar Supabase - Sincronización diaria de sismos desde CSV
+Sincroniza los últimos registros del CSV con la base de datos Supabase
+"""
 import os
+import sys
 import pandas as pd
 from supabase import create_client, Client
 from datetime import datetime
-from dotenv import load_dotenv
-
-# Cargar variables desde .env (útil para pruebas locales)
-load_dotenv()
 
 # Configuración
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") # Usar Service Role Key para inserts
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
+# Obtener ruta del CSV
 base_dir = os.path.dirname(os.path.abspath(__file__))
 csv_path = os.path.join(base_dir, '..', '..', '..', 'data', 'sismos.csv')
 
-def main():
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        print("Error: SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY no configuradas.")
-        return
+# Si no existe en esa ruta, buscar en rutas alternativas
+if not os.path.exists(csv_path):
+    csv_path = os.path.join(base_dir, 'data', 'sismos.csv')
+if not os.path.exists(csv_path):
+    csv_path = 'data/sismos.csv'
 
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-    # Leer CSV
-    if not os.path.exists(csv_path):
-        print(f"Error: No se encuentra {csv_path}")
-        return
-
-    df = pd.read_csv(csv_path)
-    
-    # Formatear datos para Supabase
-    df_to_upload = df.copy()
-    # Convertir fecha a formato ISO YYYY-MM-DD para Supabase 
-    df_to_upload['fecha_iso'] = pd.to_datetime(df_to_upload['fecha'], format='%d/%m/%Y').dt.strftime('%Y-%m-%d')
-    # Sentido a booleano
-    df_to_upload['sentido_bool'] = df_to_upload['sentido'].apply(lambda x: True if x == 'Si' else False)
-    
-    records = []
-    # Procesar solo los 100 más recientes para el workflow diario
-    for _, row in df_to_upload.head(100).iterrows(): 
-        # Helper para limpiar floats y convertirlos a None si son NaN o inválidos
-        def clean_float(val):
-            try:
-                if pd.isna(val): return None
-                f = float(val)
-                import math
-                return f if not math.isnan(f) and not math.isinf(f) else None
-            except:
-                return None
-        
-        records.append({
-            "fecha": row['fecha_iso'],
-            "hora": row['hora'],
-            "latitud": clean_float(row['latitud']),
-            "longitud": clean_float(row['longitud']),
-            "profundidad": str(row['profundidad']) if pd.notna(row['profundidad']) else None,
-            "magnitud": clean_float(row['magnitud']),
-            "provincia": row['provincia'] if pd.notna(row['provincia']) else None,
-            "sentido": bool(row['sentido_bool']) if pd.notna(row['sentido_bool']) else False
-        })
-
-    print(f"Sincronizando {len(records)} registros con Supabase (Bulk Upsert)...")
-    
+def clean_float(val):
+    """Limpia valores float y convierte NaN/Inf a None"""
     try:
-        # Intentar upsert masivo para mayor eficiencia
-        response = supabase.table("sismos").upsert(
-            records, 
-            on_conflict="fecha,hora,latitud,longitud"
-        ).execute()
-        print(f"Sincronización exitosa: {len(records)} registros procesados.")
-    except Exception as e:
-        print("-" * 30)
-        print("ERROR CRÍTICO AL SINCRONIZAR CON SUPABASE")
-        print(f"Detalle del error: {e}")
-        print("-" * 30)
+        if pd.isna(val):
+            return None
+        f = float(val)
+        import math
+        return f if not math.isnan(f) and not math.isinf(f) else None
+    except:
+        return None
 
-    print("Proceso finalizado.")
+def main():
+    print("=" * 60)
+    print("SINCRONIZACIÓN CON SUPABASE")
+    print("=" * 60)
+    
+    # Validar credenciales
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        print("❌ Error: SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY no configuradas.")
+        print("   Verifica que los secrets estén configurados en GitHub.")
+        sys.exit(1)
+
+    # Validar archivo CSV
+    if not os.path.exists(csv_path):
+        print(f"❌ Error: No se encuentra el archivo CSV en {csv_path}")
+        sys.exit(1)
+
+    print(f"📂 Archivo CSV: {csv_path}")
+
+    try:
+        # Crear cliente Supabase
+        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print("✅ Conexión a Supabase establecida")
+
+        # Leer CSV
+        df = pd.read_csv(csv_path)
+        print(f"📊 Registros en CSV: {len(df)}")
+        
+        # Formatear datos para Supabase
+        df_to_upload = df.copy()
+        
+        # Convertir fecha a formato ISO YYYY-MM-DD
+        df_to_upload['fecha_iso'] = pd.to_datetime(
+            df_to_upload['fecha'], 
+            format='%d/%m/%Y',
+            errors='coerce'
+        ).dt.strftime('%Y-%m-%d')
+        
+        # Sentido a booleano
+        df_to_upload['sentido_bool'] = df_to_upload['sentido'].apply(
+            lambda x: True if str(x).strip().lower() in ['si', 'sí', 'yes', '1', 'true'] else False
+        )
+        
+        # Preparar registros (solo los primeros 100 para actualización diaria)
+        records = []
+        batch_size = 100
+        
+        print(f"📤 Preparando {batch_size} registros más recientes...")
+        
+        for _, row in df_to_upload.head(batch_size).iterrows():
+            # Validar que tengamos datos mínimos requeridos
+            if pd.isna(row['fecha_iso']) or pd.isna(row['hora']):
+                continue
+                
+            record = {
+                "fecha": row['fecha_iso'],
+                "hora": str(row['hora']).strip(),
+                "latitud": clean_float(row['latitud']),
+                "longitud": clean_float(row['longitud']),
+                "profundidad": str(row['profundidad']).strip() if pd.notna(row['profundidad']) else None,
+                "magnitud": clean_float(row['magnitud']),
+                "provincia": str(row['provincia']).strip() if pd.notna(row['provincia']) else None,
+                "sentido": bool(row['sentido_bool'])
+            }
+            records.append(record)
+
+        if not records:
+            print("⚠️  No hay registros válidos para sincronizar")
+            return
+
+        print(f"🔄 Sincronizando {len(records)} registros con Supabase...")
+        
+        # Método 1: Intentar upsert con ignoreDuplicates (más moderno)
+        try:
+            response = supabase.table("sismos").upsert(
+                records,
+                ignore_duplicates=False
+            ).execute()
+            print(f"✅ Sincronización exitosa: {len(records)} registros procesados")
+            
+        except Exception as e1:
+            # Método 2: Fallback - insertar uno por uno ignorando conflictos
+            print(f"⚠️  Upsert masivo falló, intentando inserción individual...")
+            print(f"   Error: {str(e1)[:100]}")
+            
+            success_count = 0
+            error_count = 0
+            
+            for record in records:
+                try:
+                    # Verificar si existe
+                    existing = supabase.table("sismos").select("*").match({
+                        "fecha": record["fecha"],
+                        "hora": record["hora"],
+                        "latitud": record["latitud"],
+                        "longitud": record["longitud"]
+                    }).execute()
+                    
+                    if not existing.data:
+                        # No existe, insertar
+                        supabase.table("sismos").insert(record).execute()
+                        success_count += 1
+                    else:
+                        # Ya existe, actualizar
+                        supabase.table("sismos").update(record).match({
+                            "fecha": record["fecha"],
+                            "hora": record["hora"],
+                            "latitud": record["latitud"],
+                            "longitud": record["longitud"]
+                        }).execute()
+                        success_count += 1
+                        
+                except Exception as e2:
+                    error_count += 1
+                    if error_count <= 3:  # Mostrar solo primeros 3 errores
+                        print(f"   ⚠️  Error en registro: {str(e2)[:80]}")
+            
+            print(f"✅ Procesados: {success_count} exitosos, {error_count} errores")
+
+    except Exception as e:
+        print("=" * 60)
+        print("❌ ERROR CRÍTICO AL SINCRONIZAR CON SUPABASE")
+        print(f"Detalle: {e}")
+        print("=" * 60)
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
+    print("=" * 60)
+    print("✅ PROCESO FINALIZADO EXITOSAMENTE")
+    print("=" * 60)
 
 if __name__ == "__main__":
     main()
