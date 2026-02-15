@@ -1,6 +1,7 @@
 """
 Actualizar Supabase - Sincronización diaria de sismos desde CSV
 Sincroniza los últimos registros del CSV con la base de datos Supabase
+Compatible con estructura: inpres_sismos/inpres_sismos/db_scripts/
 """
 import os
 import sys
@@ -12,15 +13,10 @@ from datetime import datetime
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
-# Obtener ruta del CSV
+# Obtener ruta del CSV (3 niveles arriba desde db_scripts)
 base_dir = os.path.dirname(os.path.abspath(__file__))
 csv_path = os.path.join(base_dir, '..', '..', '..', 'data', 'sismos.csv')
-
-# Si no existe en esa ruta, buscar en rutas alternativas
-if not os.path.exists(csv_path):
-    csv_path = os.path.join(base_dir, 'data', 'sismos.csv')
-if not os.path.exists(csv_path):
-    csv_path = 'data/sismos.csv'
+csv_path = os.path.normpath(csv_path)
 
 def clean_float(val):
     """Limpia valores float y convierte NaN/Inf a None"""

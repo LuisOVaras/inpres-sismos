@@ -1,6 +1,7 @@
 """
 Actualizar Database SQLite - Sincronización desde CSV
 Lee sismos.csv y actualiza la base de datos SQLite sismos.db
+Compatible con estructura: inpres_sismos/inpres_sismos/db_scripts/
 """
 import pandas as pd
 import sqlite3
@@ -10,47 +11,24 @@ import sys
 # Obtener ruta absoluta con múltiples fallbacks
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Intentar diferentes rutas posibles
-csv_paths = [
-    os.path.join(base_dir, '..', '..', '..', 'data', 'sismos.csv'),
-    os.path.join(base_dir, 'data', 'sismos.csv'),
-    'data/sismos.csv',
-]
+# Path relativo desde db_scripts hacia data (3 niveles arriba)
+csv_path = os.path.join(base_dir, '..', '..', '..', 'data', 'sismos.csv')
+db_path = os.path.join(base_dir, '..', '..', '..', 'data', 'sismos.db')
 
-db_paths = [
-    os.path.join(base_dir, '..', '..', '..', 'data', 'sismos.db'),
-    os.path.join(base_dir, 'data', 'sismos.db'),
-    'data/sismos.db',
-]
-
-# Encontrar CSV
-csv_path = None
-for path in csv_paths:
-    if os.path.exists(path):
-        csv_path = path
-        break
-
-# Encontrar o crear directorio para DB
-db_path = None
-for path in db_paths:
-    db_dir = os.path.dirname(path)
-    if os.path.exists(db_dir) or db_dir == 'data':
-        db_path = path
-        break
-
-if not csv_path:
-    print("❌ Error: No se encontró sismos.csv")
-    sys.exit(1)
-
-if not db_path:
-    db_path = 'data/sismos.db'
-    os.makedirs('data', exist_ok=True)
+# Normalizar paths
+csv_path = os.path.normpath(csv_path)
+db_path = os.path.normpath(db_path)
 
 print("=" * 60)
 print("ACTUALIZACIÓN DE BASE DE DATOS SQLITE")
 print("=" * 60)
 print(f"📂 CSV: {csv_path}")
 print(f"💾 DB: {db_path}")
+
+# Verificar que el CSV existe
+if not os.path.exists(csv_path):
+    print(f"❌ Error: No se encontró {csv_path}")
+    sys.exit(1)
 
 try:
     # Leer el CSV
@@ -68,6 +46,10 @@ try:
     sismos_nuevos_df['sentido'] = sismos_nuevos_df['sentido'].apply(
         lambda x: 1 if str(x).strip().lower() in ['si', 'sí', 'yes', '1', 'true'] else 0
     )
+
+    # Crear directorio si no existe
+    db_dir = os.path.dirname(db_path)
+    os.makedirs(db_dir, exist_ok=True)
 
     # Crear la conexión a SQLite
     conn = sqlite3.connect(db_path)

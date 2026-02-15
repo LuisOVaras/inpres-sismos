@@ -40,7 +40,7 @@ jobs:
     - name: 🔍 Run Selenium scraper
       run: |
         echo "Iniciando scraping de INPRES..."
-        python actualizar_sismos.py || {
+        python inpres_sismos/inpres_sismos/selenium/actualizar_sismos.py || {
           echo "❌ Error en scraping"
           exit 1
         }
@@ -52,7 +52,7 @@ jobs:
     - name: 💾 Update SQLite database
       run: |
         echo "Actualizando base de datos SQLite..."
-        python actualizar_database.py || {
+        python inpres_sismos/inpres_sismos/db_scripts/actualizar_database.py || {
           echo "⚠️  Advertencia: Error al actualizar SQLite, pero continuando..."
         }
         echo "✅ SQLite actualizado"
@@ -67,7 +67,7 @@ jobs:
       run: |
         if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then
           echo "Sincronizando con Supabase..."
-          python actualizar_supabase.py || {
+          python inpres_sismos/inpres_sismos/db_scripts/actualizar_supabase.py || {
             echo "❌ Error al sincronizar con Supabase"
             exit 1
           }
