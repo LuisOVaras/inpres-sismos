@@ -10,6 +10,7 @@ from supabase import create_client, Client
 from datetime import datetime
 import supabase
 print("Supabase version:", supabase.__version__)
+print("SUPABASE_URL:", SUPABASE_URL)
 
 # Configuración
 SUPABASE_URL = os.getenv("SUPABASE_URL")
