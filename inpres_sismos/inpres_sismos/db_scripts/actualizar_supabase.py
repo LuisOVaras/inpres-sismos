@@ -9,6 +9,9 @@ import pandas as pd
 from supabase import create_client, Client
 from datetime import datetime
 
+import supabase
+print("Supabase version:", supabase.__version__)
+
 # Configuración
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
