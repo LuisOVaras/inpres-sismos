@@ -10,11 +10,12 @@ from supabase import create_client, Client
 from datetime import datetime
 import supabase
 print("Supabase version:", supabase.__version__)
-print("SUPABASE_URL:", SUPABASE_URL)
+
 
 # Configuración
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+print("SUPABASE_URL:", SUPABASE_URL)
 
 # Obtener ruta del CSV (3 niveles arriba desde db_scripts)
 base_dir = os.path.dirname(os.path.abspath(__file__))
