@@ -104,7 +104,7 @@ def main():
         try:
             response = supabase.table("sismos").upsert(
                 records,
-                ignore_duplicates=False
+                on_conflict="fecha,hora,latitud,longitud"
             ).execute()
             print(f"✅ Sincronización exitosa: {len(records)} registros procesados")
             
