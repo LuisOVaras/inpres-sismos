@@ -8,7 +8,6 @@ import sys
 import pandas as pd
 from supabase import create_client, Client
 from datetime import datetime
-
 import supabase
 print("Supabase version:", supabase.__version__)
 
@@ -75,31 +74,44 @@ def main():
         )
         
         # Preparar registros (solo los primeros 100 para actualización diaria)
-        records = []
         batch_size = 100
-        
         print(f"📤 Preparando {batch_size} registros más recientes...")
-        
-        for _, row in df_to_upload.head(batch_size).iterrows():
-            # Validar que tengamos datos mínimos requeridos
-            if pd.isna(row['fecha_iso']) or pd.isna(row['hora']):
+
+        # Convertimos a lista de dicts nativos
+        raw_records = df_to_upload.head(batch_size).to_dict(orient="records")
+
+        records = []
+
+        for record in raw_records:
+            # Validación mínima
+            if not record.get("fecha_iso") or not record.get("hora"):
                 continue
-                
-            record = {
-                "fecha": row['fecha_iso'],
-                "hora": str(row['hora']).strip(),
-                "latitud": clean_float(row['latitud']),
-                "longitud": clean_float(row['longitud']),
-                "profundidad": str(row['profundidad']).strip() if pd.notna(row['profundidad']) else None,
-                "magnitud": clean_float(row['magnitud']),
-                "provincia": str(row['provincia']).strip() if pd.notna(row['provincia']) else None,
-                "sentido": bool(row['sentido_bool'])
+
+            cleaned_record = {
+                "fecha": record["fecha_iso"],
+                "hora": str(record["hora"]).strip() if record["hora"] else None,
+                "latitud": float(record["latitud"]) if pd.notna(record["latitud"]) else None,
+                "longitud": float(record["longitud"]) if pd.notna(record["longitud"]) else None,
+                "profundidad": str(record["profundidad"]).strip() if record["profundidad"] else None,
+                "magnitud": float(record["magnitud"]) if pd.notna(record["magnitud"]) else None,
+                "provincia": str(record["provincia"]).strip() if record["provincia"] else None,
+                "sentido": bool(record["sentido_bool"])
             }
-            records.append(record)
+
+            records.append(cleaned_record)
+
 
         if not records:
             print("⚠️  No hay registros válidos para sincronizar")
             return
+        
+        import json
+
+        try:
+            json.dumps(records)
+            print("JSON válido")
+        except Exception as e:
+            print("Error serializando JSON:", e)
 
         print(f"🔄 Sincronizando {len(records)} registros con Supabase...")
         
