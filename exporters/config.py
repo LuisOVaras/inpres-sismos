@@ -1,0 +1,23 @@
+"""
+Configuración de rutas para los exportadores.
+Centraliza las rutas de entrada y salida para evitar rutas hardcodeadas.
+"""
+import os
+
+# Raíz del repositorio (dos niveles arriba de este archivo)
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+# Archivos de entrada (producidos por el pipeline)
+DATA_DIR = os.path.join(REPO_ROOT, "data")
+SISMOS_CSV = os.path.join(DATA_DIR, "sismos.csv")
+
+# Directorio de salida de exportaciones
+EXPORTS_DIR = os.path.join(DATA_DIR, "exports")
+
+# Archivos de salida
+GEOJSON_OUT = os.path.join(EXPORTS_DIR, "sismos.geojson")
+METADATA_OUT = os.path.join(EXPORTS_DIR, "metadata.json")
+RECENT_OUT = os.path.join(EXPORTS_DIR, "sismos_recientes.json")
+
+# Cantidad de registros para la exportación "recientes"
+RECENT_LIMIT = 500

@@ -1,21 +1,13 @@
-# Core Dependencies
+# Core — scraping
 selenium==4.16.0
 webdriver-manager==4.0.2
 pandas==3.0.0
 Scrapy==2.11.2
 
-
 # Database
 supabase==2.3.0
 python-dotenv==1.0.0
 SQLAlchemy==2.0.36
-
-# Streamlit (para la app de visualización)
-streamlit==1.38.0
-plotly==5.18.0
-folium==0.18.0
-streamlit-folium==0.23.2
-geopandas==0.14.1
 
 # Utilities
 requests==2.31.0

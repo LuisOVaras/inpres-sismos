@@ -79,7 +79,18 @@ jobs:
         fi
 
     # ═══════════════════════════════════════════════════════════
-    # PASO 7: Configurar Git y agregar cambios
+    # PASO 7 (nuevo): Generar archivos de exportación
+    # ═══════════════════════════════════════════════════════════
+    - name: Generate export files
+      run: |
+        echo "Generando archivos de exportacion..."
+        python exporters/run_exports.py || {
+          echo "Advertencia: Error al generar exportaciones, pero continuando..."
+        }
+        echo "Exportaciones completadas"
+
+    # ═══════════════════════════════════════════════════════════
+    # PASO 8: Configurar Git y agregar cambios
     # ═══════════════════════════════════════════════════════════
     - name: 📝 Configure Git and add changes
       run: |
@@ -92,8 +103,9 @@ jobs:
           git status -s
           
           # Agregar archivos específicos
-          git add data/sismos.csv || echo "⚠️  sismos.csv no encontrado"
-          git add data/sismos.db || echo "⚠️  sismos.db no encontrado"
+          git add data/sismos.csv || echo "sismos.csv no encontrado"
+          git add data/sismos.db || echo "sismos.db no encontrado"
+          git add data/exports/ || echo "data/exports/ no encontrado"
           
           # Commit solo si hay cambios staged
           if [[ -n $(git diff --cached) ]]; then
