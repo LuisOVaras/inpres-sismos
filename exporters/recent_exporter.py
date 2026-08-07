@@ -1,12 +1,13 @@
 """
 recent_exporter.py
 
-Responsabilidad única: exportar los N registros más recientes como JSON plano.
+Responsabilidad única: exportar los N registros más recientes como JSON plano,
+incluyendo IDs determinísticos y la capa de datos de ubicación enriquecida.
 
-Alternativa liviana al CSV completo para aplicaciones que solo necesitan
+Alternativa liviana al GeoJSON/CSV completo para aplicaciones que solo necesitan
 los sismos recientes (ej: mapas de tiempo real, notificaciones).
 
-No modifica sismos.csv. No toca SQLite. No toca Supabase.
+No modifica sismos.csv, SQLite ni Supabase.
 """
 import json
 import os
@@ -18,18 +19,33 @@ def export(df: pd.DataFrame) -> None:
     """
     Genera data/exports/sismos_recientes.json con los últimos RECENT_LIMIT registros.
 
-    El CSV ya está ordenado del más reciente al más antiguo (el scraper prepend).
-    Se toman simplemente los primeros N registros.
-
     Args:
         df: DataFrame producido por csv_exporter.load_sismos()
     """
     df_recent = df.head(RECENT_LIMIT).copy()
 
-    # Reemplazar NaN por None para que json.dump produzca null en lugar de NaN
-    df_recent = df_recent.where(pd.notna(df_recent), other=None)
-
-    records = df_recent.to_dict(orient="records")
+    # Formatear columnas para JSON plano limpio
+    records = []
+    for _, row in df_recent.iterrows():
+        rec = {
+            "id": str(row["id"]),
+            "fecha": row.get("fecha", None),
+            "hora": row.get("hora", None),
+            "latitud": float(row["latitud"]) if pd.notna(row["latitud"]) else None,
+            "longitud": float(row["longitud"]) if pd.notna(row["longitud"]) else None,
+            "profundidad": float(row["profundidad"]) if pd.notna(row["profundidad"]) else None,
+            "magnitud": float(row["magnitud"]) if pd.notna(row["magnitud"]) else None,
+            "sentido": row.get("sentido", None),
+            "ubicacion_original": row.get("ubicacion_original", None),
+            "ubicacion_normalizada": row.get("ubicacion_normalizada", None),
+            "provincia": row.get("provincia_normalizada", None),
+            "provincias": row.get("provincias", []),
+            "pais": row.get("pais", None),
+            "tipo_ubicacion": row.get("tipo_ubicacion", None),
+            "es_argentina": bool(row.get("es_argentina", False)),
+            "es_limite": bool(row.get("es_limite", False)),
+        }
+        records.append(rec)
 
     os.makedirs(EXPORTS_DIR, exist_ok=True)
     with open(RECENT_OUT, "w", encoding="utf-8") as f:
@@ -39,7 +55,7 @@ def export(df: pd.DataFrame) -> None:
 
 
 def _serialize(obj):
-    """Convierte tipos no serializables por json.dump (ej: numpy floats)."""
+    """Convierte tipos no serializables por json.dump (ej: numpy floats/bools)."""
     if hasattr(obj, "item"):
         return obj.item()
     raise TypeError(f"Tipo no serializable: {type(obj)}")

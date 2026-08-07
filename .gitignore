@@ -2,3 +2,6 @@ venv/
 .env
 .gitignore
 .agent
+__pycache__/
+*.pyc
+scratch/
