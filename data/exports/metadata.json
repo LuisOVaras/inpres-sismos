@@ -1,6 +1,6 @@
 {
-  "total_registros": 80034,
-  "fecha_mas_reciente": "2026-08-06",
+  "total_registros": 80036,
+  "fecha_mas_reciente": "2026-08-07",
   "fecha_mas_antigua": "2011-07-16",
   "magnitud_maxima": 8.3,
   "magnitud_minima": 1.6,
@@ -142,7 +142,7 @@
     "jujuy",
     "�MENDOZA"
   ],
-  "ultima_actualizacion_utc": "2026-08-07T17:10:00Z",
+  "ultima_actualizacion_utc": "2026-08-07T17:57:19Z",
   "fuente": "INPRES — Instituto Nacional de Prevención Sísmica de Argentina",
   "repositorio": "https://github.com/LuisOVaras/inpres-sismos"
 }
