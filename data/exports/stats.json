@@ -1,5 +1,5 @@
 {
-  "total_registros_analizados": 80804,
+  "total_registros_analizados": 80812,
   "sismos_por_anio": {
     "2011": 2240,
     "2012": 4889,
@@ -16,7 +16,7 @@
     "2023": 5794,
     "2024": 4573,
     "2025": 3949,
-    "2026": 3266
+    "2026": 3274
   },
   "sismos_por_mes": {
     "Enero": 7102,
@@ -28,29 +28,29 @@
     "Julio": 6568,
     "Agosto": 7264,
     "Septiembre": 7004,
-    "Octubre": 7262,
+    "Octubre": 7270,
     "Noviembre": 6984,
     "Diciembre": 7053
   },
   "distribucion_magnitud": {
     "menor_2_0": 4,
-    "entre_2_0_y_2_9": 49891,
-    "entre_3_0_y_3_9": 27592,
+    "entre_2_0_y_2_9": 49896,
+    "entre_3_0_y_3_9": 27595,
     "entre_4_0_y_4_9": 2483,
     "entre_5_0_y_5_9": 713,
     "mayor_o_igual_6_0": 121
   },
   "distribucion_profundidad": {
-    "superficial_0_33km": 15218,
+    "superficial_0_33km": 15220,
     "intermedio_33_70km": 1646,
-    "profundo_mas_70km": 63940
+    "profundo_mas_70km": 63946
   },
   "distribucion_provincia": {
-    "San Juan": 41866,
+    "San Juan": 41872,
     "Salta": 8948,
     "Jujuy": 7771,
-    "La Rioja": 6785,
-    "Mendoza": 5795,
+    "La Rioja": 6786,
+    "Mendoza": 5796,
     "Catamarca": 4726,
     "Córdoba": 1518,
     "San Luis": 769,
@@ -69,7 +69,7 @@
     "Entre Ríos": 1
   },
   "distribucion_pais": {
-    "Argentina": 79903,
+    "Argentina": 79911,
     "Chile": 513,
     "Océano Pacífico": 278,
     "Desconocido": 37,
@@ -84,8 +84,8 @@
     "Filipinas": 1
   },
   "sismos_sentidos_vs_no": {
-    "sentidos": 3710,
-    "no_sentidos": 77094
+    "sentidos": 3712,
+    "no_sentidos": 77100
   },
   "eventos_destacados_magnitud": [
     {
@@ -167,19 +167,6 @@
       "sentido": "No"
     },
     {
-      "id": "9eeab58e23b4c175",
-      "fecha": "02/05/2025",
-      "hora": "09:58:00",
-      "magnitud": 7.4,
-      "profundidad": 10.0,
-      "latitud": -56.86,
-      "longitud": -68.768,
-      "ubicacion_normalizada": "Tierra del Fuego, Antártida e Islas del Atlántico Sur",
-      "provincia": "Tierra del Fuego, Antártida e Islas del Atlántico Sur",
-      "pais": "Argentina",
-      "sentido": "Si"
-    },
-    {
       "id": "21d71f07bae9c1dd",
       "fecha": "19/08/2016",
       "hora": "04:32:23",
@@ -193,17 +180,17 @@
       "sentido": "No"
     },
     {
-      "id": "9452edffb0875338",
-      "fecha": "10/12/2018",
-      "hora": "23:26:30",
-      "magnitud": 7.1,
-      "profundidad": 144.0,
-      "latitud": -58.6,
-      "longitud": -26.4,
-      "ubicacion_normalizada": "Islas del Atlántico Sur",
+      "id": "9eeab58e23b4c175",
+      "fecha": "02/05/2025",
+      "hora": "09:58:00",
+      "magnitud": 7.4,
+      "profundidad": 10.0,
+      "latitud": -56.86,
+      "longitud": -68.768,
+      "ubicacion_normalizada": "Tierra del Fuego, Antártida e Islas del Atlántico Sur",
       "provincia": "Tierra del Fuego, Antártida e Islas del Atlántico Sur",
       "pais": "Argentina",
-      "sentido": "No"
+      "sentido": "Si"
     },
     {
       "id": "cd1d35d2463ac283",
@@ -217,6 +204,19 @@
       "provincia": null,
       "pais": "Chile",
       "sentido": "Si"
+    },
+    {
+      "id": "9452edffb0875338",
+      "fecha": "10/12/2018",
+      "hora": "23:26:30",
+      "magnitud": 7.1,
+      "profundidad": 144.0,
+      "latitud": -58.6,
+      "longitud": -26.4,
+      "ubicacion_normalizada": "Islas del Atlántico Sur",
+      "provincia": "Tierra del Fuego, Antártida e Islas del Atlántico Sur",
+      "pais": "Argentina",
+      "sentido": "No"
     },
     {
       "id": "dcb0a36fdf45901b",
@@ -271,16 +271,16 @@
       "sentido": "Si"
     },
     {
-      "id": "652a9a654e683af2",
-      "fecha": "16/09/2015",
-      "hora": "20:16:08",
+      "id": "9fa8ef0ac19e2a1a",
+      "fecha": "07/11/2015",
+      "hora": "04:31:41",
       "magnitud": 6.8,
-      "profundidad": 10.0,
-      "latitud": -31.78,
-      "longitud": -72.29,
-      "ubicacion_normalizada": "Océano Pacífico",
+      "profundidad": 56.0,
+      "latitud": -30.844,
+      "longitud": -71.727,
+      "ubicacion_normalizada": "Chile",
       "provincia": null,
-      "pais": "Océano Pacífico",
+      "pais": "Chile",
       "sentido": "Si"
     }
   ]
